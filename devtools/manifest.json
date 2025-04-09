@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AbleDOM Devtools Extension",
+  "version": "1.0",
+  "description": "Integrates AbleDOM with devtools for easier debugging.",
+  "devtools_page": "devtools.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
