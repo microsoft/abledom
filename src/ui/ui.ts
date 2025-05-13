@@ -5,7 +5,11 @@
 
 // The imports below will become string contents of the files unrolled by
 // both Vite (in `npm run dev`) and TSUP (in `npm run build`).
-import { ValidationError } from "../rules/base";
+import {
+  ValidationNotification,
+  ValidationRule,
+  ValidationRuleType,
+} from "../rules/base";
 // @ts-expect-error parsed assets
 import css from "./ui.css?raw";
 // @ts-expect-error parsed assets
@@ -16,6 +20,30 @@ import svgHelp from "./help.svg?raw";
 import svgLog from "./log.svg?raw";
 // @ts-expect-error parsed assets
 import svgReveal from "./reveal.svg?raw";
+
+// @ts-expect-error parsed assets
+import svgHideAll from "./hideall.svg?raw";
+// @ts-expect-error parsed assets
+import svgMuteAll from "./muteall.svg?raw";
+// @ts-expect-error parsed assets
+import svgShowAll from "./showall.svg?raw";
+// @ts-expect-error parsed assets
+import svgAlignTopLeft from "./aligntopleft.svg?raw";
+// @ts-expect-error parsed assets
+import svgAlignTopRight from "./aligntopright.svg?raw";
+// @ts-expect-error parsed assets
+import svgAlignBottomRight from "./alignbottomright.svg?raw";
+// @ts-expect-error parsed assets
+import svgAlignBottomLeft from "./alignbottomleft.svg?raw";
+
+enum UIAlignments {
+  BottomLeft = "bottom-left",
+  BottomRight = "bottom-right",
+  TopLeft = "top-left",
+  TopRight = "top-right",
+}
+
+const pressedClass = "pressed";
 
 interface WindowWithAbleDOMDevtools extends Window {
   __ableDOMDevtools?: {
@@ -29,36 +57,68 @@ export interface HTMLElementWithAbleDOMUIFlag extends HTMLElement {
 }
 
 export class NotificationUI {
+  private static _notificationsUI: NotificationsUI | undefined;
+
+  static setOnToggle(
+    instance: NotificationUI,
+    onToggle: (notificationUI: NotificationUI, show: boolean) => void,
+  ) {
+    instance._onToggle = onToggle;
+  }
+
   private static _highlight: ElementHighlighter;
 
-  private _wrapper: HTMLElement;
+  private _win: Window;
+  private _wrapper: HTMLElementWithAbleDOMUIFlag;
+  private _rule: ValidationRule;
+  private _onToggle:
+    | ((notificationUI: NotificationUI, show: boolean) => void)
+    | undefined;
 
   static getElement(instance: NotificationUI): HTMLElement {
     return instance._wrapper;
   }
 
-  constructor(element: HTMLElement, error: ValidationError) {
-    const wrapper = (this._wrapper = document.createElement(
-      "div",
-    ) as HTMLElementWithAbleDOMUIFlag);
+  isHidden = false;
 
-    const win = element.ownerDocument.defaultView;
+  constructor(win: Window, rule: ValidationRule) {
+    this._win = win;
+    this._rule = rule;
 
-    if (!win) {
-      return;
+    if (!NotificationUI._notificationsUI) {
+      NotificationUI._notificationsUI = new NotificationsUI(this._win);
     }
+
+    this._wrapper = win.document.createElement(
+      "div",
+    ) as HTMLElementWithAbleDOMUIFlag;
 
     if (!NotificationUI._highlight) {
       NotificationUI._highlight = new ElementHighlighter(win);
     }
 
+    NotificationUI._notificationsUI.addNotification(this);
+  }
+
+  update(notification: ValidationNotification): void {
+    const win = this._win;
+    const rule = this._rule;
+    const wrapper = this._wrapper;
+    const element = notification.element;
+
     wrapper.__abledomui = true;
 
     wrapper.innerHTML = `
-      <div class="abledom-notification-container"><div class="abledom-notification">
+      <div class="abledom-notification-container"><div class="abledom-notification${
+        rule.type === ValidationRuleType.Warning
+          ? " abledom-notification_warning"
+          : rule.type === ValidationRuleType.Info
+            ? " abledom-notification_info"
+            : ""
+      }">
         <button class="button" title="Log to Console">${svgLog}</button>
         <button class="button" title="Reveal in Elements panel">${svgReveal}</button>
-        ${error.message}
+        ${notification.message}
         <a href class="button close" href="/" title="Open help" target="_blank">${svgHelp}</a>
         <button class="button close" class="close" title="Hide">${svgClose}</button>
       </div></div>`;
@@ -72,19 +132,22 @@ export class NotificationUI {
 
     logButton.onclick = () => {
       console.error(
-        "AbleDOM violation: ",
-        "\nerror:",
-        error.message,
+        "AbleDOM: ",
+        "\nmessage:",
+        notification.message,
         "\nelement:",
         element,
-        ...(error.rel ? ["\nrelative:", error.rel] : []),
+        ...(notification.rel ? ["\nrelative:", notification.rel] : []),
+        "\nnotification:",
+        notification,
       );
     };
 
-    const hasDevTools = !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
-      ?.revealElement;
+    const hasDevTools =
+      !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools?.revealElement &&
+      false; // Temtorarily disabling the devtools plugin integration.
 
-    if (hasDevTools && win.document.body.contains(element)) {
+    if (hasDevTools && element && win.document.body.contains(element)) {
       revealButton.onclick = () => {
         const revealElement = (win as WindowWithAbleDOMDevtools)
           .__ableDOMDevtools?.revealElement;
@@ -102,12 +165,12 @@ export class NotificationUI {
     }
 
     closeButton.onclick = () => {
-      wrapper.style.display = "none";
+      this.toggle(false);
       NotificationUI._highlight?.hide();
     };
 
     container.onmouseover = () => {
-      NotificationUI._highlight?.highlight(element);
+      element && NotificationUI._highlight?.highlight(element);
     };
 
     container.onmouseout = () => {
@@ -115,26 +178,218 @@ export class NotificationUI {
     };
   }
 
+  toggle(show: boolean, initial = false) {
+    this.isHidden = !show;
+
+    if (!initial) {
+      this._onToggle?.(this, show);
+
+      if (!this._rule.anchored && !show) {
+        this.dispose();
+      }
+    }
+
+    this._wrapper.style.display = show ? "block" : "none";
+  }
+
   dispose() {
     this._wrapper.remove();
+    NotificationUI._notificationsUI?.removeNotification(this);
   }
 }
 
 export class NotificationsUI {
-  // private _window: Window;
   private _container: HTMLElement;
+  private _notificationsContainer: HTMLElement;
+  private _menuElement: HTMLElement;
+  private _notificationCountElement: HTMLSpanElement | undefined;
+  private _showAllButton: HTMLButtonElement | undefined;
+  private _hideAllButton: HTMLButtonElement | undefined;
+  private _alignBottomLeftButton: HTMLButtonElement | undefined;
+  private _alignTopLeftButton: HTMLButtonElement | undefined;
+  private _alignTopRightButton: HTMLButtonElement | undefined;
+  private _alignBottomRightButton: HTMLButtonElement | undefined;
+
+  private _isMuted = false;
   private _notifications: Set<NotificationUI> = new Set();
 
   constructor(win: Window) {
-    // this._window = win;
-
     const container = (this._container =
-      document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
+      win.document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
     container.__abledomui = true;
     container.id = "abledom-report";
     container.innerHTML = `<style>${css}</style>`;
 
+    const notificationsContainer = (this._notificationsContainer =
+      win.document.createElement("div")) as HTMLDivElement;
+    notificationsContainer.className = "abledom-notifications-container";
+    container.appendChild(notificationsContainer);
+
+    const menuElement = (this._menuElement =
+      win.document.createElement("div")) as HTMLDivElement;
+
+    menuElement.className = "abledom-menu-container";
+    menuElement.innerHTML = `<div class="abledom-menu"><span class="notifications-count"></span
+      ><button class="button" title="Show all notifications">${svgShowAll}</button
+      ><button class="button" title="Hide all notifications">${svgHideAll}</button
+      ><button class="button" title="Mute newly appearing notifications">${svgMuteAll}</button
+      ><button class="button align-button align-button-first pressed" title="Attach notifications to bottom left">${svgAlignBottomLeft}</button
+      ><button class="button align-button" title="Attach notifications to top left">${svgAlignTopLeft}</button
+      ><button class="button align-button" title="Attach notifications to top right">${svgAlignTopRight}</button
+      ><button class="button align-button align-button-last" title="Attach notifications to bottom right">${svgAlignBottomRight}</button
+      ></div>`;
+
+    // Make sure the string HTML above unpacks properly to the assignment below.
+    const [
+      notificationCountElement,
+      showAllButton,
+      hideAllButton,
+      muteButton,
+      alignBottomLeftButton,
+      alignTopLeftButton,
+      alignTopRightButton,
+      alignBottomRightButton,
+    ] = menuElement.firstElementChild?.childNodes || [];
+
+    if (
+      notificationCountElement instanceof HTMLSpanElement &&
+      showAllButton instanceof HTMLButtonElement &&
+      hideAllButton instanceof HTMLButtonElement &&
+      muteButton instanceof HTMLButtonElement &&
+      alignBottomLeftButton instanceof HTMLButtonElement &&
+      alignTopLeftButton instanceof HTMLButtonElement &&
+      alignTopRightButton instanceof HTMLButtonElement &&
+      alignBottomRightButton instanceof HTMLButtonElement
+    ) {
+      container.appendChild(menuElement);
+
+      this._notificationCountElement = notificationCountElement;
+      this._showAllButton = showAllButton;
+      this._hideAllButton = hideAllButton;
+      this._alignBottomLeftButton = alignBottomLeftButton;
+      this._alignTopLeftButton = alignTopLeftButton;
+      this._alignTopRightButton = alignTopRightButton;
+      this._alignBottomRightButton = alignBottomRightButton;
+
+      showAllButton.onclick = () => {
+        this.showAll();
+      };
+      hideAllButton.onclick = () => {
+        this.hideAll();
+      };
+      muteButton.onclick = () => {
+        const isMuted = (this._isMuted =
+          muteButton.classList.toggle(pressedClass));
+
+        if (isMuted) {
+          muteButton.setAttribute(
+            "title",
+            "Unmute newly appearing notifications",
+          );
+        } else {
+          muteButton.setAttribute(
+            "title",
+            "Mute newly appearing notifications",
+          );
+        }
+      };
+
+      alignBottomLeftButton.onclick = () => {
+        this.setUIAlignment(UIAlignments.BottomLeft);
+      };
+      alignBottomRightButton.onclick = () => {
+        this.setUIAlignment(UIAlignments.BottomRight);
+      };
+      alignTopLeftButton.onclick = () => {
+        this.setUIAlignment(UIAlignments.TopLeft);
+      };
+      alignTopRightButton.onclick = () => {
+        this.setUIAlignment(UIAlignments.TopRight);
+      };
+    }
+
     win.document.body.appendChild(container);
+  }
+
+  private setUIAlignment(alignment: UIAlignments) {
+    this._alignBottomLeftButton?.classList.remove(pressedClass);
+    this._alignBottomRightButton?.classList.remove(pressedClass);
+    this._alignTopLeftButton?.classList.remove(pressedClass);
+    this._alignTopRightButton?.classList.remove(pressedClass);
+
+    this._container.classList.remove(
+      "abledom-align-left",
+      "abledom-align-right",
+      "abledom-align-top",
+      "abledom-align-bottom",
+    );
+    let containerClasses: string[] = [];
+    let notificationsFirst = false;
+
+    switch (alignment) {
+      case UIAlignments.BottomLeft:
+        containerClasses = ["abledom-align-left", "abledom-align-bottom"];
+        notificationsFirst = true;
+        this._alignBottomLeftButton?.classList.add(pressedClass);
+        break;
+      case UIAlignments.BottomRight:
+        containerClasses = ["abledom-align-right", "abledom-align-bottom"];
+        notificationsFirst = true;
+        this._alignBottomRightButton?.classList.add(pressedClass);
+        break;
+      case UIAlignments.TopLeft:
+        containerClasses = ["abledom-align-left", "abledom-align-top"];
+        this._alignTopLeftButton?.classList.add(pressedClass);
+        break;
+      case UIAlignments.TopRight:
+        containerClasses = ["abledom-align-right", "abledom-align-top"];
+        this._alignTopRightButton?.classList.add(pressedClass);
+        break;
+    }
+
+    this._container.classList.add(...containerClasses);
+    this._container.insertBefore(
+      this._notificationsContainer,
+      notificationsFirst ? this._menuElement : null,
+    );
+  }
+
+  private _setNotificationsCount(count: number) {
+    const countElement = this._notificationCountElement;
+
+    if (countElement && count > 0) {
+      countElement.innerHTML = `<strong>${count}</strong> notification${count > 1 ? "s" : ""}`;
+      this._menuElement.style.display = "block";
+    } else {
+      this._menuElement.style.display = "none";
+    }
+  }
+
+  private _setShowHideButtonsVisibility() {
+    const showAllButton = this._showAllButton;
+    const hideAllButton = this._hideAllButton;
+
+    if (!showAllButton || !hideAllButton) {
+      return;
+    }
+
+    let allHidden = true;
+    let allVisible = true;
+
+    for (let notification of this._notifications) {
+      if (notification.isHidden) {
+        allVisible = false;
+      } else {
+        allHidden = false;
+      }
+
+      if (!allHidden && !allVisible) {
+        break;
+      }
+    }
+
+    hideAllButton.style.display = allHidden ? "none" : "block";
+    showAllButton.style.display = allVisible ? "none" : "block";
   }
 
   addNotification(notification: NotificationUI) {
@@ -142,8 +397,21 @@ export class NotificationsUI {
       return;
     }
 
+    if (this._isMuted) {
+      notification.toggle(false, true);
+    }
+
     this._notifications.add(notification);
-    this._container.appendChild(NotificationUI.getElement(notification));
+    this._notificationsContainer.appendChild(
+      NotificationUI.getElement(notification),
+    );
+
+    NotificationUI.setOnToggle(notification, () => {
+      this._setShowHideButtonsVisibility();
+    });
+
+    this._setNotificationsCount(this._notifications.size);
+    this._setShowHideButtonsVisibility();
   }
 
   removeNotification(notification: NotificationUI) {
@@ -152,7 +420,23 @@ export class NotificationsUI {
     }
 
     this._notifications.delete(notification);
-    this._container.removeChild(NotificationUI.getElement(notification));
+
+    this._setNotificationsCount(this._notifications.size);
+    this._setShowHideButtonsVisibility();
+  }
+
+  hideAll() {
+    this._notifications.forEach((notification) => {
+      notification.toggle(false);
+    });
+    this._setShowHideButtonsVisibility();
+  }
+
+  showAll() {
+    this._notifications.forEach((notification) => {
+      notification.toggle(true);
+    });
+    this._setShowHideButtonsVisibility();
   }
 }
 

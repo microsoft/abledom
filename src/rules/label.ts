@@ -8,7 +8,7 @@ import {
   focusableElementSelector,
   isElementVisible,
 } from "../utils";
-import { ValidationRule, ValidationResult } from "./base";
+import { ValidationRule, ValidationResult, ValidationRuleType } from "./base";
 
 const _keyboardEditableInputTypes = new Set([
   "text",
@@ -26,6 +26,7 @@ const _keyboardEditableInputTypes = new Set([
 ]);
 
 export class FocusableElementLabelRule extends ValidationRule {
+  type = ValidationRuleType.Error;
   name = "FocusableElementLabelRule";
   anchored = true;
 
@@ -151,10 +152,11 @@ export class FocusableElementLabelRule extends ValidationRule {
     }
 
     return {
-      error: isElementVisible(element)
+      notification: isElementVisible(element)
         ? {
             id: "focusable-element-label",
             message: "Focusable element must have a non-empty text label.",
+            element,
           }
         : undefined,
       dependsOnIds: new Set(labelledByValues),

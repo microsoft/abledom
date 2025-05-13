@@ -3,9 +3,16 @@
  * Licensed under the MIT License.
  */
 
-export interface ValidationError {
+export enum ValidationRuleType {
+  Error = 1,
+  Warning,
+  Info,
+}
+
+export interface ValidationNotification {
   id: string;
   message: string;
+  element?: HTMLElement;
   rel?: Node;
   link?: string;
   stack?: string[];
@@ -13,28 +20,39 @@ export interface ValidationError {
 }
 
 export interface ValidationResult {
-  error?: ValidationError;
+  notification?: ValidationNotification;
   dependsOnIds?: Set<string>;
 }
 
-export interface FocusError {
-  element: HTMLElement;
-  error: ValidationError;
-}
-
-export interface BlurError {
-  element: HTMLElement;
+export interface BlurNotification extends ValidationNotification {
   position?: string[];
-  error: ValidationError;
 }
 
-export abstract class ValidationRule {
+export abstract class ValidationRule<
+  N extends ValidationNotification = ValidationNotification,
+> {
+  abstract type: ValidationRuleType;
   abstract name: string;
   private _window?: Window;
   private _exceptions: ((element: HTMLElement) => boolean)[] = [];
+  private _onNotification:
+    | ((rult: ValidationRule<N>, notification: N) => void)
+    | undefined;
 
-  static setWindow(instance: ValidationRule, window: Window): void {
+  static init(
+    instance: ValidationRule,
+    window: Window,
+    onNotification: (
+      rule: ValidationRule,
+      notification: ValidationNotification,
+    ) => void,
+  ): void {
     instance._window = window;
+    instance._onNotification = onNotification;
+  }
+
+  static dispose(instance: ValidationRule): void {
+    instance.dispose();
   }
 
   static checkExceptions(
@@ -48,6 +66,12 @@ export abstract class ValidationRule {
     }
 
     return false;
+  }
+
+  private dispose(): void {
+    this._window = undefined;
+    this._onNotification = undefined;
+    this._exceptions = [];
   }
 
   addException(checkException: (element: HTMLElement) => boolean): void {
@@ -87,6 +111,10 @@ export abstract class ValidationRule {
 
   validate?(element: HTMLElement): ValidationResult | null;
 
-  async focused?(event: FocusEvent): Promise<FocusError | null>;
-  async blurred?(event: FocusEvent): Promise<BlurError | null>;
+  notify(notification: N): void {
+    this._onNotification?.(this, notification);
+  }
+
+  focused?(event: FocusEvent): ValidationNotification | null;
+  blurred?(event: FocusEvent): BlurNotification | null;
 }

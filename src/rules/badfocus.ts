@@ -4,26 +4,23 @@
  */
 
 import { isElementVisible, getStackTrace } from "../utils";
-import { FocusError, BlurError, ValidationRule } from "./base";
+import { ValidationRule, ValidationRuleType } from "./base";
 
 export class BadFocusRule extends ValidationRule {
+  type = ValidationRuleType.Error;
   name = "bad-focus";
   anchored = false;
 
   private _lastFocusStack: string[] | undefined;
   private _lastBlurStack: string[] | undefined;
+  private _clearCheckTimer: (() => void) | undefined;
 
-  private _reject: (() => void) | undefined;
-
-  async focused(): Promise<FocusError | null> {
+  focused(): null {
     this._lastFocusStack = getStackTrace();
-    this._reject?.();
     return null;
   }
 
-  async blurred(): Promise<BlurError | null> {
-    this._reject?.();
-
+  blurred(): null {
     const win = this.window;
 
     if (!win) {
@@ -32,41 +29,37 @@ export class BadFocusRule extends ValidationRule {
 
     this._lastBlurStack = getStackTrace();
 
-    return new Promise((resolve, reject) => {
-      let checkTimer: number | undefined;
+    this._clearCheckTimer?.();
 
-      this._reject = () => {
-        if (checkTimer) {
-          win.clearTimeout(checkTimer);
-          checkTimer = undefined;
-        }
+    const checkTimer = win.setTimeout(() => {
+      delete this._clearCheckTimer;
 
-        this._reject = undefined;
-        reject();
-      };
+      if (
+        document.activeElement &&
+        !isElementVisible(document.activeElement as HTMLElement)
+      ) {
+        this.notify({
+          id: "bad-focus",
+          message: "Focused stolen by invisible element.",
+          element: document.activeElement as HTMLElement,
+          stack: this._lastBlurStack,
+          relStack: this._lastFocusStack,
+        });
+      }
+    }, 100);
 
-      checkTimer = win.setTimeout(() => {
-        checkTimer = undefined;
+    this._clearCheckTimer = () => {
+      delete this._clearCheckTimer;
+      win.clearTimeout(checkTimer);
+    };
 
-        this._reject = undefined;
+    return null;
+  }
 
-        if (
-          document.activeElement &&
-          !isElementVisible(document.activeElement as HTMLElement)
-        ) {
-          resolve({
-            element: document.activeElement as HTMLElement,
-            error: {
-              id: "bad-focus",
-              message: "Focused stolen by invisible element.",
-              stack: this._lastBlurStack,
-              relStack: this._lastFocusStack,
-            },
-          });
-        } else {
-          resolve(null);
-        }
-      }, 100);
-    });
+  stop(): void {
+    this._clearCheckTimer?.();
+    this._clearCheckTimer = undefined;
+    this._lastFocusStack = undefined;
+    this._lastBlurStack = undefined;
   }
 }

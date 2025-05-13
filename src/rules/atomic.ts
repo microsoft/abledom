@@ -3,9 +3,10 @@
  * Licensed under the MIT License.
  */
 import { focusableElementSelector, matchesSelector } from "../utils";
-import { ValidationRule, ValidationResult } from "./base";
+import { ValidationRule, ValidationResult, ValidationRuleType } from "./base";
 
 export class AtomicRule extends ValidationRule {
+  type = ValidationRuleType.Error;
   name = "atomic";
   anchored = true;
 
@@ -43,9 +44,10 @@ export class AtomicRule extends ValidationRule {
 
     if (parentAtomic) {
       return {
-        error: {
+        notification: {
           id: "focusable-in-atomic",
           message: "Focusable element inside atomic focusable.",
+          element,
           rel: parentAtomic,
         },
       };

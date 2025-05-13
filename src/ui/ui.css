@@ -10,6 +10,114 @@
   z-index: 100500;
 }
 
+#abledom-report :focus-visible {
+  outline: 3px solid red;
+  mix-blend-mode: difference;
+}
+
+#abledom-report.abledom-align-left {
+  left: 10px;
+  right: auto;
+}
+
+#abledom-report.abledom-align-right {
+  left: auto;
+  right: 10px;
+}
+
+#abledom-report.abledom-align-bottom {
+  bottom: 20px;
+  top: auto;
+}
+
+#abledom-report.abledom-align-top {
+  /* flex-direction: column-reverse; */
+  bottom: auto;
+  top: 10px;
+}
+
+.abledom-menu-container {
+  backdrop-filter: blur(3px);
+  border-radius: 8px;
+  box-shadow: 0px 0px 4px rgba(127, 127, 127, 0.5);
+  display: inline-block;
+  margin: 2px auto 2px 0;
+}
+
+#abledom-report.abledom-align-right .abledom-menu-container {
+  margin: 2px 0 2px auto;
+}
+
+.abledom-menu {
+  background-color: rgba(140, 10, 121, 0.7);
+  border-radius: 8px;
+  color: white;
+  display: inline flex;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+  padding: 4px;
+}
+
+.abledom-menu .notifications-count {
+  margin: 0 8px;
+  display: inline-block;
+}
+
+.abledom-menu .button {
+  all: unset;
+  color: #000;
+  cursor: pointer;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(200, 200, 200, 1) 100%
+  );
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-sizing: border-box;
+  line-height: 0px;
+  margin-right: 4px;
+  max-height: 26px;
+  padding: 2px;
+  text-decoration: none;
+}
+
+.abledom-menu .align-button {
+  border-right-color: rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+  margin: 0;
+}
+
+.abledom-menu .align-button:active,
+#abledom-report .pressed {
+  background: linear-gradient(
+    180deg,
+    rgba(130, 130, 130, 1) 0%,
+    rgba(180, 180, 180, 1) 100%
+  );
+}
+
+.abledom-menu .align-button-first {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  margin-left: 8px;
+}
+.abledom-menu .align-button-last {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  border-right-color: rgba(255, 255, 255, 0.4);
+}
+
+.abledom-notifications-container {
+  overflow: scroll;
+  max-height: calc(100vh - 100px);
+}
+
+#abledom-report.abledom-align-right .abledom-notifications-container {
+  text-align: right;
+}
+
 .abledom-notification-container {
   backdrop-filter: blur(3px);
   border-radius: 8px;
@@ -27,6 +135,12 @@
   font-size: 16px;
   line-height: 26px;
   padding: 4px;
+}
+.abledom-notification_warning {
+  background-color: rgba(163, 82, 1, 0.7);
+}
+.abledom-notification_info {
+  background-color: rgba(0, 0, 255, 0.7);
 }
 
 .abledom-notification .button {

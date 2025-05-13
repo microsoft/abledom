@@ -4,78 +4,94 @@
  */
 
 import {
-  NotificationsUI,
   NotificationUI,
   HTMLElementWithAbleDOMUIFlag,
   isAbleDOMUIElement,
 } from "./ui/ui";
 import { isAccessibilityAffectingElement } from "./utils";
-import { ValidationRule, ValidationError } from "./rules/base";
+import { ValidationRule, ValidationNotification } from "./rules/base";
 
-export class ValidationErrorReport {
-  static _notificationsUI: NotificationsUI | undefined;
+// class ValidationNotificationUI {
+//   static _notificationsUI: NotificationsUI | undefined;
 
-  private _notification: NotificationUI | undefined;
-  private _onHide: (() => void) | undefined;
+//   private _win: Window;
+//   private _notification: NotificationUI | undefined;
+//   // private _onHide: (() => void) | undefined;
 
-  constructor(
-    public readonly element: HTMLElement,
-    public error: ValidationError,
-    onHide?: () => void,
-  ) {
-    this._onHide = onHide;
-    this.report();
-  }
+//   constructor(
+//     win: Window,
+//     public error: ValidationNotification,
+//     public type: ValidationRuleType,
+//     // onHide?: () => void,
+//   ) {
+//     this._win = win;
+//     // this._onHide = onHide;
+//     this.report();
+//   }
 
-  update(error: ValidationError): void {
-    this.error = error;
-    this.report();
-  }
+//   update(error: ValidationNotification, type: ValidationRuleType): void {
+//     this.type = type;
+//     this.error = error;
+//     this.report();
+//   }
 
-  report(): void {
-    if (!ValidationErrorReport._notificationsUI) {
-      ValidationErrorReport._notificationsUI = new NotificationsUI(window);
-    }
+//   report(): void {
+//     if (!ValidationNotificationUI._notificationsUI) {
+//       ValidationNotificationUI._notificationsUI = new NotificationsUI(window);
+//     }
 
-    let notification = this._notification;
+//     let notification = this._notification;
 
-    if (notification) {
-      /** TODO */
-    } else {
-      notification = this._notification = new NotificationUI(
-        this.element,
-        this.error,
-      );
-    }
+//     if (notification) {
+//       /** TODO */
+//     } else {
+//       notification = this._notification = new NotificationUI(
+//         this._win,
+//         this.error,
+//         this.type,
+//       );
+//     }
 
-    ValidationErrorReport._notificationsUI.addNotification(notification);
-  }
+//     ValidationNotificationUI._notificationsUI.addNotification(notification);
 
-  hide(): void {
-    this._onHide?.();
-  }
+//     const element = this.error.element as HTMLElementWithAbleDOMUIFlag;
 
-  remove(): void {
-    if (this._notification) {
-      ValidationErrorReport._notificationsUI?.removeNotification(
-        this._notification,
-      );
-      delete this._notification;
-    }
-  }
-}
+//     if (element) {
+//       const keyArray: IExceptionPathPart[] = [];
+
+//       for (let el: HTMLElement | null = element; el; el = el.parentElement) {
+//         keyArray.unshift({tagName: el.tagName});
+//       }
+
+//       console.error('AbleDOM path', this.error.id, this.error.element, keyArray);
+//     }
+//   }
+
+//   toggle(show: boolean): void {
+//     this._notification?.toggle(show);
+//   }
+
+//   remove(): void {
+//     if (this._notification) {
+//       ValidationNotificationUI._notificationsUI?.removeNotification(
+//         this._notification,
+//       );
+//       delete this._notification;
+//     }
+//   }
+// }
 
 interface HTMLElementWithAbleDOM extends HTMLElement {
   __abledom?: {
-    errors?: Map<ValidationRule, ValidationErrorReport>;
+    notifications?: Map<ValidationRule, NotificationUI>;
   };
 }
 
 export class AbleDOM {
-  private _window: Window;
+  private _win: Window;
   private _observer: MutationObserver;
   private _clearValidationTimeout: (() => void) | undefined;
-  private _elementsWithErrors: Set<HTMLElementWithAbleDOM> = new Set();
+  private _elementsWithNotifications: Set<HTMLElementWithAbleDOM> = new Set();
   private _changedElementIds: Set<string> = new Set();
   private _elementsDependingOnId: Map<string, Set<HTMLElement>> = new Map();
   private _dependantIdsByElement: Map<HTMLElement, Set<string>> = new Map();
@@ -85,7 +101,7 @@ export class AbleDOM {
   private _isStarted = false;
 
   constructor(win: Window) {
-    this._window = win;
+    this._win = win;
 
     const _elementsToValidate: Set<HTMLElementWithAbleDOM> = new Set();
     const _elementsToRemove: Set<HTMLElementWithAbleDOM> = new Set();
@@ -179,7 +195,7 @@ export class AbleDOM {
 
     function lookUp(node: Node): void {
       for (let n: Node | null = node; n; n = n.parentNode) {
-        addTarget(n, false);
+        addTarget(n, _elementsToRemove.has(node as HTMLElementWithAbleDOM));
       }
     }
 
@@ -255,46 +271,48 @@ export class AbleDOM {
     }
   }
 
-  private _addValidationError(
-    element: HTMLElementWithAbleDOM,
+  private _addNotification(
     rule: ValidationRule,
-    error?: ValidationError,
+    notification: ValidationNotification,
   ) {
-    if (!error) {
-      this._removeElementError(element, rule);
+    const element = notification?.element as HTMLElementWithAbleDOM | undefined;
+
+    if (!notification) {
+      this._removeNotification(element || this._win.document.body, rule);
       return;
     }
 
-    if (rule.anchored) {
+    let notificationUI: NotificationUI | undefined;
+
+    if (rule.anchored && element) {
       let abledomOnElement = element.__abledom;
 
       if (!abledomOnElement) {
         abledomOnElement = element.__abledom = {};
       }
 
-      let errors = abledomOnElement.errors;
+      let notifications = abledomOnElement.notifications;
 
-      if (!errors) {
-        errors = abledomOnElement.errors = new Map();
+      if (!notifications) {
+        notifications = abledomOnElement.notifications = new Map();
       }
 
-      const report = errors.get(rule);
+      notificationUI = notifications.get(rule);
 
-      if (report) {
-        report.update(error);
-      } else {
-        errors.set(rule, new ValidationErrorReport(element, error));
+      if (!notificationUI) {
+        notificationUI = new NotificationUI(this._win, rule);
+        notifications.set(rule, notificationUI);
       }
 
-      this._elementsWithErrors.add(element);
+      this._elementsWithNotifications.add(element);
     } else {
-      const report = new ValidationErrorReport(element, error, () => {
-        report.remove();
-      });
+      notificationUI = new NotificationUI(this._win, rule);
     }
+
+    notificationUI.update(notification);
   }
 
-  private _removeElementError(
+  private _removeNotification(
     element: HTMLElementWithAbleDOM,
     rule: ValidationRule,
   ) {
@@ -302,21 +320,21 @@ export class AbleDOM {
       return;
     }
 
-    const errors = element.__abledom?.errors;
+    const notifications = element.__abledom?.notifications;
 
-    if (!errors) {
+    if (!notifications) {
       return;
     }
 
-    const report = errors.get(rule);
+    const notification = notifications.get(rule);
 
-    if (report) {
-      report.remove();
-      errors.delete(rule);
+    if (notification) {
+      notification.dispose();
+      notifications.delete(rule);
     }
 
-    if (errors.size === 0) {
-      this._elementsWithErrors.delete(element);
+    if (notifications.size === 0) {
+      this._elementsWithNotifications.delete(element);
       delete element.__abledom;
     }
   }
@@ -335,12 +353,12 @@ export class AbleDOM {
     elements.forEach((element) => {
       if (
         isAccessibilityAffectingElement(element) ||
-        element.__abledom?.errors
+        element.__abledom?.notifications
       ) {
         const dependsOnIds = new Set<string>();
 
         for (const rule of this._rules) {
-          if (rule.accept?.(element) === false) {
+          if (!rule.validate || rule.accept?.(element) === false) {
             continue;
           }
 
@@ -350,8 +368,8 @@ export class AbleDOM {
 
           const validationResult = rule.validate?.(element);
 
-          if (validationResult) {
-            this._addValidationError(element, rule, validationResult.error);
+          if (validationResult?.notification) {
+            this._addNotification(rule, validationResult.notification);
 
             const ids = validationResult.dependsOnIds;
 
@@ -360,8 +378,8 @@ export class AbleDOM {
                 dependsOnIds.add(id);
               }
             }
-          } else if (element.__abledom?.errors?.has(rule)) {
-            this._removeElementError(element, rule);
+          } else if (element.__abledom?.notifications?.has(rule)) {
+            this._removeNotification(element, rule);
           }
         }
 
@@ -429,8 +447,8 @@ export class AbleDOM {
 
   private _remove(elements: Set<HTMLElementWithAbleDOM>) {
     elements.forEach((element) => {
-      const rules = [...(element.__abledom?.errors?.keys() || [])];
-      rules.forEach((rule) => this._removeElementError(element, rule));
+      const rules = [...(element.__abledom?.notifications?.keys() || [])];
+      rules.forEach((rule) => this._removeNotification(element, rule));
     });
   }
 
@@ -442,20 +460,11 @@ export class AbleDOM {
     }
 
     for (const rule of this._rules) {
-      rule.focused?.(event).then(
-        (focusError) => {
-          if (focusError) {
-            this._addValidationError(
-              focusError.element,
-              rule,
-              focusError.error,
-            );
-          }
-        },
-        () => {
-          // Ignore errors.
-        },
-      );
+      const focusNotification = rule.focused?.(event);
+
+      if (focusNotification) {
+        this._addNotification(rule, focusNotification);
+      }
     }
   };
 
@@ -467,21 +476,19 @@ export class AbleDOM {
     }
 
     for (const rule of this._rules) {
-      rule.blurred?.(event).then(
-        (focusError) => {
-          if (focusError) {
-            this._addValidationError(
-              focusError.element,
-              rule,
-              focusError.error,
-            );
-          }
-        },
-        () => {
-          // Ignore errors.
-        },
-      );
+      const blurNotification = rule.blurred?.(event);
+
+      if (blurNotification) {
+        this._addNotification(rule, blurNotification);
+      }
     }
+  };
+
+  private _notifyAsync = (
+    rule: ValidationRule,
+    notification: ValidationNotification,
+  ): void => {
+    this._addNotification(rule, notification);
   };
 
   addRule(rule: ValidationRule): void {
@@ -506,7 +513,7 @@ export class AbleDOM {
     this._isStarted = true;
 
     for (const rule of this._rules) {
-      ValidationRule.setWindow(rule, this._window);
+      ValidationRule.init(rule, this._win, this._notifyAsync);
       rule.start?.();
     }
 
@@ -514,11 +521,11 @@ export class AbleDOM {
   }
 
   dispose() {
-    this._window.document.addEventListener("focusin", this._onFocusIn, true);
-    this._window.document.addEventListener("focusout", this._onFocusOut, true);
+    this._win.document.addEventListener("focusin", this._onFocusIn, true);
+    this._win.document.addEventListener("focusout", this._onFocusOut, true);
 
-    this._remove(this._elementsWithErrors);
-    this._elementsWithErrors.clear();
+    this._remove(this._elementsWithNotifications);
+    this._elementsWithNotifications.clear();
 
     this._dependantIdsByElement.clear();
     this._elementsDependingOnId.clear();
@@ -528,6 +535,7 @@ export class AbleDOM {
 
     for (const rule of this._rules) {
       rule.stop?.();
+      ValidationRule.dispose(rule);
     }
 
     this._rules = [];

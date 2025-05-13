@@ -4,9 +4,10 @@
  */
 
 import { isElementVisible, getStackTrace } from "../utils";
-import { FocusError, BlurError, ValidationRule } from "./base";
+import { BlurNotification, ValidationRule, ValidationRuleType } from "./base";
 
-export class FocusLostRule extends ValidationRule {
+export class FocusLostRule extends ValidationRule<BlurNotification> {
+  type = ValidationRuleType.Error;
   name = "focus-lost";
   anchored = false;
 
@@ -16,6 +17,8 @@ export class FocusLostRule extends ValidationRule {
   private _focusedElementPosition: string[] | undefined;
   private _lastFocusStack: string[] | undefined;
   private _lastBlurStack: string[] | undefined;
+  private _mouseEventTimer: number | undefined;
+  private _releaseMouseEvent: (() => void) | undefined;
 
   private _serializeElementPosition(element: HTMLElement): string[] {
     const position: string[] = [];
@@ -37,7 +40,7 @@ export class FocusLostRule extends ValidationRule {
     return position;
   }
 
-  async focused(event: FocusEvent): Promise<FocusError | null> {
+  focused(event: FocusEvent): null {
     const target = event.target as HTMLElement | null;
 
     this._clearScheduledFocusLost?.();
@@ -52,18 +55,15 @@ export class FocusLostRule extends ValidationRule {
     return null;
   }
 
-  async blurred(event: FocusEvent): Promise<BlurError | null> {
+  blurred(event: FocusEvent): null {
     const target = event.target as HTMLElement | null;
     const win = this.window;
 
     this._clearScheduledFocusLost?.();
 
-    if (!target || !win || event.relatedTarget) {
+    if (!target || !win || event.relatedTarget || this._mouseEventTimer) {
       return null;
     }
-
-    let focusLostTimer: number | undefined;
-    let rejectPromise: (() => void) | undefined;
 
     const targetPosition =
       this._focusedElement === target
@@ -76,48 +76,73 @@ export class FocusLostRule extends ValidationRule {
     this._focusedElement = undefined;
     this._focusedElementPosition = undefined;
 
-    this._clearScheduledFocusLost = () => {
+    const focusLostTimer = win.setTimeout(() => {
       delete this._clearScheduledFocusLost;
 
-      rejectPromise?.();
+      if (
+        win.document.body &&
+        (!win.document.activeElement ||
+          win.document.activeElement === win.document.body) &&
+        (!win.document.body.contains(target) || !isElementVisible(target))
+      ) {
+        this.notify({
+          element: target,
+          id: "focus-lost",
+          message: "Focus lost.",
+          stack: this._lastBlurStack,
+          relStack: this._lastFocusStack,
+          position: targetPosition || [],
+        });
+      }
+    }, this._focusLostTimeout);
 
-      if (focusLostTimer) {
-        win.clearTimeout(focusLostTimer);
-        focusLostTimer = undefined;
+    this._clearScheduledFocusLost = () => {
+      delete this._clearScheduledFocusLost;
+      win.clearTimeout(focusLostTimer);
+    };
+
+    return null;
+  }
+
+  start(): void {
+    const win = this.window;
+
+    if (!win) {
+      return;
+    }
+
+    const onMouseEvent = () => {
+      if (!this._mouseEventTimer) {
+        this._mouseEventTimer = win.setTimeout(() => {
+          this._mouseEventTimer = undefined;
+        }, 0);
       }
     };
 
-    return new Promise<BlurError | null>((resolve, reject) => {
-      rejectPromise = () => {
-        rejectPromise = undefined;
-        reject();
-      };
+    win.addEventListener("mousedown", onMouseEvent, true);
+    win.addEventListener("mouseup", onMouseEvent, true);
+    win.addEventListener("mousemove", onMouseEvent, true);
 
-      focusLostTimer = win.setTimeout(() => {
-        focusLostTimer = undefined;
-        rejectPromise = undefined;
-        delete this._clearScheduledFocusLost;
+    this._releaseMouseEvent = () => {
+      delete this._releaseMouseEvent;
 
-        if (
-          win.document.body &&
-          (!win.document.activeElement ||
-            win.document.activeElement === win.document.body) &&
-          (!win.document.body.contains(target) || !isElementVisible(target))
-        ) {
-          resolve({
-            element: target,
-            position: targetPosition || [],
-            error: {
-              id: "focus-lost",
-              message: "Focus lost.",
-              stack: this._lastBlurStack,
-              relStack: this._lastFocusStack,
-            },
-          });
-        } else {
-          resolve(null);
-        }
-      }, this._focusLostTimeout);
-    });
+      if (this._mouseEventTimer) {
+        win.clearTimeout(this._mouseEventTimer);
+        delete this._mouseEventTimer;
+      }
+
+      win.removeEventListener("mousedown", onMouseEvent, true);
+      win.removeEventListener("mouseup", onMouseEvent, true);
+      win.removeEventListener("mousemove", onMouseEvent, true);
+    };
+  }
+
+  stop(): void {
+    this._releaseMouseEvent?.();
+    this._clearScheduledFocusLost?.();
+    this._focusedElement = undefined;
+    this._focusedElementPosition = undefined;
+    this._lastFocusStack = undefined;
+    this._lastBlurStack = undefined;
   }
 }

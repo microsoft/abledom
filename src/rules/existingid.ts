@@ -3,9 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { ValidationRule, ValidationResult } from "./base";
+import { ValidationRule, ValidationResult, ValidationRuleType } from "./base";
 
 export class ExistingIdRule extends ValidationRule {
+  type = ValidationRuleType.Error;
   name = "existing-id";
   anchored = true;
 
@@ -39,9 +40,10 @@ export class ExistingIdRule extends ValidationRule {
     }
 
     return {
-      error: {
+      notification: {
         id: "missing-id",
         message: `Elements with referenced ids do not extist.`,
+        element,
       },
       dependsOnIds: new Set(ids),
     };
