@@ -51,6 +51,26 @@ interface WindowWithAbleDOMDevtools extends Window {
   };
 }
 
+// TODO: Adjust the types once the Trusted Types typings are available in the DOM lib.
+interface WindowWithTrustedTypes extends Window {
+  trustedTypes?: {
+    createPolicy?: (
+      name: string,
+      policy: { createHTML: (html: string) => string },
+    ) => {
+      createHTML: (html: string) => string;
+    };
+  };
+}
+
+function createTrustedHTML(win: WindowWithTrustedTypes, html: string): string {
+  const escapeHTMLPolicy = win.trustedTypes?.createPolicy?.("forceInner", {
+    createHTML: (html: string) => html,
+  });
+
+  return escapeHTMLPolicy ? escapeHTMLPolicy.createHTML(html) : html;
+}
+
 export interface HTMLElementWithAbleDOMUIFlag extends HTMLElement {
   // A flag to quickly test that the element should be ignored by the validator.
   __abledomui?: boolean;
@@ -108,7 +128,9 @@ export class NotificationUI {
 
     wrapper.__abledomui = true;
 
-    wrapper.innerHTML = `
+    wrapper.innerHTML = createTrustedHTML(
+      win,
+      `
       <div class="abledom-notification-container"><div class="abledom-notification${
         rule.type === ValidationRuleType.Warning
           ? " abledom-notification_warning"
@@ -121,7 +143,8 @@ export class NotificationUI {
         ${notification.message}
         <a href class="button close" href="/" title="Open help" target="_blank">${svgHelp}</a>
         <button class="button close" class="close" title="Hide">${svgClose}</button>
-      </div></div>`;
+      </div></div>`,
+    );
 
     const container = wrapper.firstElementChild as HTMLElement;
     const buttons = wrapper.querySelectorAll("button");
@@ -199,6 +222,7 @@ export class NotificationUI {
 }
 
 export class NotificationsUI {
+  private _win: Window;
   private _container: HTMLElement;
   private _notificationsContainer: HTMLElement;
   private _menuElement: HTMLElement;
@@ -214,11 +238,13 @@ export class NotificationsUI {
   private _notifications: Set<NotificationUI> = new Set();
 
   constructor(win: Window) {
+    this._win = win;
+
     const container = (this._container =
       win.document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
     container.__abledomui = true;
     container.id = "abledom-report";
-    container.innerHTML = `<style>${css}</style>`;
+    container.innerHTML = createTrustedHTML(win, `<style>${css}</style>`);
 
     const notificationsContainer = (this._notificationsContainer =
       win.document.createElement("div")) as HTMLDivElement;
@@ -229,7 +255,9 @@ export class NotificationsUI {
       win.document.createElement("div")) as HTMLDivElement;
 
     menuElement.className = "abledom-menu-container";
-    menuElement.innerHTML = `<div class="abledom-menu"><span class="notifications-count"></span
+    menuElement.innerHTML = createTrustedHTML(
+      win,
+      `<div class="abledom-menu"><span class="notifications-count"></span
       ><button class="button" title="Show all notifications">${svgShowAll}</button
       ><button class="button" title="Hide all notifications">${svgHideAll}</button
       ><button class="button" title="Mute newly appearing notifications">${svgMuteAll}</button
@@ -237,7 +265,8 @@ export class NotificationsUI {
       ><button class="button align-button" title="Attach notifications to top left">${svgAlignTopLeft}</button
       ><button class="button align-button" title="Attach notifications to top right">${svgAlignTopRight}</button
       ><button class="button align-button align-button-last" title="Attach notifications to bottom right">${svgAlignBottomRight}</button
-      ></div>`;
+      ></div>`,
+    );
 
     // Make sure the string HTML above unpacks properly to the assignment below.
     const [
@@ -358,7 +387,10 @@ export class NotificationsUI {
     const countElement = this._notificationCountElement;
 
     if (countElement && count > 0) {
-      countElement.innerHTML = `<strong>${count}</strong> notification${count > 1 ? "s" : ""}`;
+      countElement.innerHTML = createTrustedHTML(
+        this._win,
+        `<strong>${count}</strong> notification${count > 1 ? "s" : ""}`,
+      );
       this._menuElement.style.display = "block";
     } else {
       this._menuElement.style.display = "none";
