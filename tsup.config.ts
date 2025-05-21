@@ -8,6 +8,7 @@ import path from "path";
 import { defineConfig, Options } from "tsup";
 import type { Plugin } from "esbuild";
 import pkg from "./package.json";
+import { transformSVG } from "./transformsvg";
 
 type TSUPPlugin = NonNullable<Options["plugins"]>[number];
 const disablePlugin = (name: string): TSUPPlugin => ({
@@ -32,8 +33,11 @@ const inlineRawPlugin: Plugin = {
     build.onLoad({ filter: /.*/, namespace: "inline-file" }, async (args) => {
       const contents = await fs.promises.readFile(args.path, "utf-8");
       return {
-        contents: `export default ${JSON.stringify(contents)};`,
+        contents: args.path.endsWith(".svg")
+          ? `import {DOMBuilder} from "./domBuilder"; export default ${transformSVG(contents)};`
+          : `export default ${JSON.stringify(contents)};`,
         loader: "ts",
+        resolveDir: path.dirname(args.path),
       };
     });
   },

@@ -4,6 +4,7 @@
  */
 
 import { defineConfig } from "vite";
+import { transformSVG } from "./transformsvg";
 
 export default defineConfig({
   define: {
@@ -25,4 +26,22 @@ export default defineConfig({
       },
     },
   },
+  plugins: [
+    {
+      name: "postprocess-raw",
+      enforce: "post",
+      transform(code, id) {
+        if (id.endsWith(".svg?raw")) {
+          // Your postprocessing logic here
+          // const processed = code.replace(/body/g, 'html body'); // Example
+          return {
+            code: `import {DOMBuilder} from "./domBuilder"; export default ${transformSVG(code)};`,
+            map: null,
+          };
+        }
+
+        return undefined;
+      },
+    },
+  ],
 });

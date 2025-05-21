@@ -3,13 +3,14 @@
  * Licensed under the MIT License.
  */
 
-// The imports below will become string contents of the files unrolled by
-// both Vite (in `npm run dev`) and TSUP (in `npm run build`).
 import {
   ValidationNotification,
   ValidationRule,
   ValidationRuleType,
 } from "../rules/base";
+
+// The imports below will become functions that use DOMBuilder to build SVG
+// unrolled by both Vite (in `npm run dev`) and TSUP (in `npm run build`).
 // @ts-expect-error parsed assets
 import css from "./ui.css?raw";
 // @ts-expect-error parsed assets
@@ -36,6 +37,8 @@ import svgAlignBottomRight from "./alignbottomright.svg?raw";
 // @ts-expect-error parsed assets
 import svgAlignBottomLeft from "./alignbottomleft.svg?raw";
 
+import { DOMBuilder } from "./domBuilder";
+
 enum UIAlignments {
   BottomLeft = "bottom-left",
   BottomRight = "bottom-right",
@@ -49,26 +52,6 @@ interface WindowWithAbleDOMDevtools extends Window {
   __ableDOMDevtools?: {
     revealElement?: (element: HTMLElement) => Promise<boolean>;
   };
-}
-
-// TODO: Adjust the types once the Trusted Types typings are available in the DOM lib.
-interface WindowWithTrustedTypes extends Window {
-  trustedTypes?: {
-    createPolicy?: (
-      name: string,
-      policy: { createHTML: (html: string) => string },
-    ) => {
-      createHTML: (html: string) => string;
-    };
-  };
-}
-
-function createTrustedHTML(win: WindowWithTrustedTypes, html: string): string {
-  const escapeHTMLPolicy = win.trustedTypes?.createPolicy?.("forceInner", {
-    createHTML: (html: string) => html,
-  });
-
-  return escapeHTMLPolicy ? escapeHTMLPolicy.createHTML(html) : html;
 }
 
 export interface HTMLElementWithAbleDOMUIFlag extends HTMLElement {
@@ -127,78 +110,109 @@ export class NotificationUI {
     const element = notification.element;
 
     wrapper.__abledomui = true;
+    wrapper.textContent = "";
 
-    wrapper.innerHTML = createTrustedHTML(
-      win,
-      `
-      <div class="abledom-notification-container"><div class="abledom-notification${
-        rule.type === ValidationRuleType.Warning
-          ? " abledom-notification_warning"
-          : rule.type === ValidationRuleType.Info
-            ? " abledom-notification_info"
-            : ""
-      }">
-        <button class="button" title="Log to Console">${svgLog}</button>
-        <button class="button" title="Reveal in Elements panel">${svgReveal}</button>
-        ${notification.message}
-        <a href class="button close" href="/" title="Open help" target="_blank">${svgHelp}</a>
-        <button class="button close" class="close" title="Hide">${svgClose}</button>
-      </div></div>`,
-    );
+    new DOMBuilder(wrapper)
+      .openTag(
+        "div",
+        { class: "abledom-notification-container" },
+        (container) => {
+          container.onmouseover = () => {
+            element && NotificationUI._highlight?.highlight(element);
+          };
 
-    const container = wrapper.firstElementChild as HTMLElement;
-    const buttons = wrapper.querySelectorAll("button");
-
-    const logButton = buttons[0];
-    const revealButton = buttons[1];
-    const closeButton = buttons[2];
-
-    logButton.onclick = () => {
-      console.error(
-        "AbleDOM: ",
-        "\nmessage:",
-        notification.message,
-        "\nelement:",
-        element,
-        ...(notification.rel ? ["\nrelative:", notification.rel] : []),
-        "\nnotification:",
-        notification,
-      );
-    };
-
-    const hasDevTools =
-      !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools?.revealElement &&
-      false; // Temtorarily disabling the devtools plugin integration.
-
-    if (hasDevTools && element && win.document.body.contains(element)) {
-      revealButton.onclick = () => {
-        const revealElement = (win as WindowWithAbleDOMDevtools)
-          .__ableDOMDevtools?.revealElement;
-
-        if (revealElement && win.document.body.contains(element)) {
-          revealElement(element).then((revealed: boolean) => {
-            if (!revealed) {
-              // TODO
-            }
-          });
-        }
-      };
-    } else {
-      revealButton.style.display = "none";
-    }
-
-    closeButton.onclick = () => {
-      this.toggle(false);
-      NotificationUI._highlight?.hide();
-    };
-
-    container.onmouseover = () => {
-      element && NotificationUI._highlight?.highlight(element);
-    };
-
-    container.onmouseout = () => {
-      NotificationUI._highlight?.hide();
-    };
+          container.onmouseout = () => {
+            NotificationUI._highlight?.hide();
+          };
+        },
+      )
+      .openTag("div", {
+        class: `abledom-notification${
+          rule.type === ValidationRuleType.Warning
+            ? " abledom-notification_warning"
+            : rule.type === ValidationRuleType.Info
+              ? " abledom-notification_info"
+              : ""
+        }`,
+      })
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Log to Console",
+        },
+        (logButton) => {
+          logButton.onclick = () => {
+            console.error(
+              "AbleDOM: ",
+              "\nmessage:",
+              notification.message,
+              "\nelement:",
+              element,
+              ...(notification.rel ? ["\nrelative:", notification.rel] : []),
+              "\nnotification:",
+              notification,
+            );
+          };
+        },
+      )
+      .builder(svgLog)
+      .closeTag()
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Reveal in Elements panel",
+        },
+        (revealButton: HTMLElement) => {
+          const hasDevTools =
+            !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
+              ?.revealElement && false; // Temtorarily disabling the devtools plugin integration.
+          if (hasDevTools && element && win.document.body.contains(element)) {
+            revealButton.onclick = () => {
+              const revealElement = (win as WindowWithAbleDOMDevtools)
+                .__ableDOMDevtools?.revealElement;
+              if (revealElement && win.document.body.contains(element)) {
+                revealElement(element).then((revealed: boolean) => {
+                  if (!revealed) {
+                    // TODO
+                  }
+                });
+              }
+            };
+          } else {
+            revealButton.style.display = "none";
+          }
+        },
+      )
+      .builder(svgReveal)
+      .closeTag()
+      .text(notification.message)
+      .openTag("a", {
+        class: "button close",
+        href: "/",
+        title: "Open help",
+        target: "_blank",
+      })
+      .builder(svgHelp)
+      .closeTag()
+      .openTag(
+        "button",
+        {
+          class: "button close",
+          title: "Hide",
+        },
+        (closeButton) => {
+          closeButton.onclick = () => {
+            this.toggle(false);
+            NotificationUI._highlight?.hide();
+          };
+        },
+      )
+      .builder(svgClose)
+      .closeTag()
+      .closeTag()
+      .closeTag();
   }
 
   toggle(show: boolean, initial = false) {
@@ -222,7 +236,6 @@ export class NotificationUI {
 }
 
 export class NotificationsUI {
-  private _win: Window;
   private _container: HTMLElement;
   private _notificationsContainer: HTMLElement;
   private _menuElement: HTMLElement;
@@ -238,13 +251,15 @@ export class NotificationsUI {
   private _notifications: Set<NotificationUI> = new Set();
 
   constructor(win: Window) {
-    this._win = win;
-
     const container = (this._container =
       win.document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
     container.__abledomui = true;
     container.id = "abledom-report";
-    container.innerHTML = createTrustedHTML(win, `<style>${css}</style>`);
+
+    const style = document.createElement("style");
+    style.type = "text/css";
+    style.appendChild(document.createTextNode(css));
+    container.appendChild(style);
 
     const notificationsContainer = (this._notificationsContainer =
       win.document.createElement("div")) as HTMLDivElement;
@@ -255,18 +270,57 @@ export class NotificationsUI {
       win.document.createElement("div")) as HTMLDivElement;
 
     menuElement.className = "abledom-menu-container";
-    menuElement.innerHTML = createTrustedHTML(
-      win,
-      `<div class="abledom-menu"><span class="notifications-count"></span
-      ><button class="button" title="Show all notifications">${svgShowAll}</button
-      ><button class="button" title="Hide all notifications">${svgHideAll}</button
-      ><button class="button" title="Mute newly appearing notifications">${svgMuteAll}</button
-      ><button class="button align-button align-button-first pressed" title="Attach notifications to bottom left">${svgAlignBottomLeft}</button
-      ><button class="button align-button" title="Attach notifications to top left">${svgAlignTopLeft}</button
-      ><button class="button align-button" title="Attach notifications to top right">${svgAlignTopRight}</button
-      ><button class="button align-button align-button-last" title="Attach notifications to bottom right">${svgAlignBottomRight}</button
-      ></div>`,
-    );
+
+    new DOMBuilder(menuElement)
+      .openTag("div", { class: "abledom-menu" })
+      .openTag("span", {
+        class: "notifications-count",
+        title: "Number of notifications",
+      })
+      .closeTag()
+      .openTag("button", {
+        class: "button",
+        title: "Show all notifications",
+      })
+      .builder(svgShowAll)
+      .closeTag()
+      .openTag("button", {
+        class: "button",
+        title: "Hide all notifications",
+      })
+      .builder(svgHideAll)
+      .closeTag()
+      .openTag("button", {
+        class: "button",
+        title: "Mute newly appearing notifications",
+      })
+      .builder(svgMuteAll)
+      .closeTag()
+      .openTag("button", {
+        class: "button align-button align-button-first pressed",
+        title: "Attach notifications to bottom left",
+      })
+      .builder(svgAlignBottomLeft)
+      .closeTag()
+      .openTag("button", {
+        class: "button align-button",
+        title: "Attach notifications to top left",
+      })
+      .builder(svgAlignTopLeft)
+      .closeTag()
+      .openTag("button", {
+        class: "button align-button",
+        title: "Attach notifications to top right",
+      })
+      .builder(svgAlignTopRight)
+      .closeTag()
+      .openTag("button", {
+        class: "button align-button align-button-last",
+        title: "Attach notifications to bottom right",
+      })
+      .builder(svgAlignBottomRight)
+      .closeTag()
+      .closeTag();
 
     // Make sure the string HTML above unpacks properly to the assignment below.
     const [
@@ -387,10 +441,13 @@ export class NotificationsUI {
     const countElement = this._notificationCountElement;
 
     if (countElement && count > 0) {
-      countElement.innerHTML = createTrustedHTML(
-        this._win,
-        `<strong>${count}</strong> notification${count > 1 ? "s" : ""}`,
-      );
+      countElement.textContent = "";
+      new DOMBuilder(countElement)
+        .openTag("strong")
+        .text(`${count}`)
+        .closeTag()
+        .text(` notification${count > 1 ? "s" : ""}`);
+
       this._menuElement.style.display = "block";
     } else {
       this._menuElement.style.display = "none";
