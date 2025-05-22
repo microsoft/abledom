@@ -70,10 +70,10 @@ export class DOMBuilder {
     return this;
   }
 
-  builder(
-    buildDOM: (parent: HTMLElement | DocumentFragment) => void,
+  element(
+    callback: (element: HTMLElement | DocumentFragment) => void,
   ): DOMBuilder {
-    buildDOM(this._stack[0]);
+    callback(this._stack[0]);
     return this;
   }
 }

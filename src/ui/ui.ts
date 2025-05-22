@@ -156,7 +156,7 @@ export class NotificationUI {
           };
         },
       )
-      .builder(svgLog)
+      .element(svgLog)
       .closeTag()
       .openTag(
         "button",
@@ -185,7 +185,7 @@ export class NotificationUI {
           }
         },
       )
-      .builder(svgReveal)
+      .element(svgReveal)
       .closeTag()
       .text(notification.message)
       .openTag("a", {
@@ -194,7 +194,7 @@ export class NotificationUI {
         title: "Open help",
         target: "_blank",
       })
-      .builder(svgHelp)
+      .element(svgHelp)
       .closeTag()
       .openTag(
         "button",
@@ -209,7 +209,7 @@ export class NotificationUI {
           };
         },
       )
-      .builder(svgClose)
+      .element(svgClose)
       .closeTag()
       .closeTag()
       .closeTag();
@@ -240,12 +240,12 @@ export class NotificationsUI {
   private _notificationsContainer: HTMLElement;
   private _menuElement: HTMLElement;
   private _notificationCountElement: HTMLSpanElement | undefined;
-  private _showAllButton: HTMLButtonElement | undefined;
-  private _hideAllButton: HTMLButtonElement | undefined;
-  private _alignBottomLeftButton: HTMLButtonElement | undefined;
-  private _alignTopLeftButton: HTMLButtonElement | undefined;
-  private _alignTopRightButton: HTMLButtonElement | undefined;
-  private _alignBottomRightButton: HTMLButtonElement | undefined;
+  private _showAllButton: HTMLElement | undefined;
+  private _hideAllButton: HTMLElement | undefined;
+  private _alignBottomLeftButton: HTMLElement | undefined;
+  private _alignTopLeftButton: HTMLElement | undefined;
+  private _alignTopRightButton: HTMLElement | undefined;
+  private _alignBottomRightButton: HTMLElement | undefined;
 
   private _isMuted = false;
   private _notifications: Set<NotificationUI> = new Set();
@@ -270,126 +270,145 @@ export class NotificationsUI {
       win.document.createElement("div")) as HTMLDivElement;
 
     menuElement.className = "abledom-menu-container";
+    container.appendChild(menuElement);
 
     new DOMBuilder(menuElement)
       .openTag("div", { class: "abledom-menu" })
-      .openTag("span", {
-        class: "notifications-count",
-        title: "Number of notifications",
-      })
+      .openTag(
+        "span",
+        {
+          class: "notifications-count",
+          title: "Number of notifications",
+        },
+        (notificationCountElement) => {
+          this._notificationCountElement = notificationCountElement;
+        },
+      )
       .closeTag()
-      .openTag("button", {
-        class: "button",
-        title: "Show all notifications",
-      })
-      .builder(svgShowAll)
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Show all notifications",
+        },
+        (showAllButton) => {
+          this._showAllButton = showAllButton;
+
+          showAllButton.onclick = () => {
+            this.showAll();
+          };
+        },
+      )
+      .element(svgShowAll)
       .closeTag()
-      .openTag("button", {
-        class: "button",
-        title: "Hide all notifications",
-      })
-      .builder(svgHideAll)
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Hide all notifications",
+        },
+        (hideAllButton) => {
+          this._hideAllButton = hideAllButton;
+
+          hideAllButton.onclick = () => {
+            this.hideAll();
+          };
+        },
+      )
+      .element(svgHideAll)
       .closeTag()
-      .openTag("button", {
-        class: "button",
-        title: "Mute newly appearing notifications",
-      })
-      .builder(svgMuteAll)
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Mute newly appearing notifications",
+        },
+        (muteButton) => {
+          muteButton.onclick = () => {
+            const isMuted = (this._isMuted =
+              muteButton.classList.toggle(pressedClass));
+
+            if (isMuted) {
+              muteButton.setAttribute(
+                "title",
+                "Unmute newly appearing notifications",
+              );
+            } else {
+              muteButton.setAttribute(
+                "title",
+                "Mute newly appearing notifications",
+              );
+            }
+          };
+        },
+      )
+      .element(svgMuteAll)
       .closeTag()
-      .openTag("button", {
-        class: "button align-button align-button-first pressed",
-        title: "Attach notifications to bottom left",
-      })
-      .builder(svgAlignBottomLeft)
+      .openTag(
+        "button",
+        {
+          class: "button align-button align-button-first pressed",
+          title: "Attach notifications to bottom left",
+        },
+        (alignBottomLeftButton) => {
+          this._alignBottomLeftButton = alignBottomLeftButton;
+
+          alignBottomLeftButton.onclick = () => {
+            this.setUIAlignment(UIAlignments.BottomLeft);
+          };
+        },
+      )
+      .element(svgAlignBottomLeft)
       .closeTag()
-      .openTag("button", {
-        class: "button align-button",
-        title: "Attach notifications to top left",
-      })
-      .builder(svgAlignTopLeft)
+      .openTag(
+        "button",
+        {
+          class: "button align-button",
+          title: "Attach notifications to top left",
+        },
+        (alignTopLeftButton) => {
+          this._alignTopLeftButton = alignTopLeftButton;
+
+          alignTopLeftButton.onclick = () => {
+            this.setUIAlignment(UIAlignments.TopLeft);
+          };
+        },
+      )
+      .element(svgAlignTopLeft)
       .closeTag()
-      .openTag("button", {
-        class: "button align-button",
-        title: "Attach notifications to top right",
-      })
-      .builder(svgAlignTopRight)
+      .openTag(
+        "button",
+        {
+          class: "button align-button",
+          title: "Attach notifications to top right",
+        },
+        (alignTopRightButton) => {
+          this._alignTopRightButton = alignTopRightButton;
+
+          alignTopRightButton.onclick = () => {
+            this.setUIAlignment(UIAlignments.TopRight);
+          };
+        },
+      )
+      .element(svgAlignTopRight)
       .closeTag()
-      .openTag("button", {
-        class: "button align-button align-button-last",
-        title: "Attach notifications to bottom right",
-      })
-      .builder(svgAlignBottomRight)
+      .openTag(
+        "button",
+        {
+          class: "button align-button align-button-last",
+          title: "Attach notifications to bottom right",
+        },
+        (alignBottomRightButton) => {
+          this._alignBottomRightButton = alignBottomRightButton;
+
+          alignBottomRightButton.onclick = () => {
+            this.setUIAlignment(UIAlignments.BottomRight);
+          };
+        },
+      )
+      .element(svgAlignBottomRight)
       .closeTag()
       .closeTag();
-
-    // Make sure the string HTML above unpacks properly to the assignment below.
-    const [
-      notificationCountElement,
-      showAllButton,
-      hideAllButton,
-      muteButton,
-      alignBottomLeftButton,
-      alignTopLeftButton,
-      alignTopRightButton,
-      alignBottomRightButton,
-    ] = menuElement.firstElementChild?.childNodes || [];
-
-    if (
-      notificationCountElement instanceof HTMLSpanElement &&
-      showAllButton instanceof HTMLButtonElement &&
-      hideAllButton instanceof HTMLButtonElement &&
-      muteButton instanceof HTMLButtonElement &&
-      alignBottomLeftButton instanceof HTMLButtonElement &&
-      alignTopLeftButton instanceof HTMLButtonElement &&
-      alignTopRightButton instanceof HTMLButtonElement &&
-      alignBottomRightButton instanceof HTMLButtonElement
-    ) {
-      container.appendChild(menuElement);
-
-      this._notificationCountElement = notificationCountElement;
-      this._showAllButton = showAllButton;
-      this._hideAllButton = hideAllButton;
-      this._alignBottomLeftButton = alignBottomLeftButton;
-      this._alignTopLeftButton = alignTopLeftButton;
-      this._alignTopRightButton = alignTopRightButton;
-      this._alignBottomRightButton = alignBottomRightButton;
-
-      showAllButton.onclick = () => {
-        this.showAll();
-      };
-      hideAllButton.onclick = () => {
-        this.hideAll();
-      };
-      muteButton.onclick = () => {
-        const isMuted = (this._isMuted =
-          muteButton.classList.toggle(pressedClass));
-
-        if (isMuted) {
-          muteButton.setAttribute(
-            "title",
-            "Unmute newly appearing notifications",
-          );
-        } else {
-          muteButton.setAttribute(
-            "title",
-            "Mute newly appearing notifications",
-          );
-        }
-      };
-
-      alignBottomLeftButton.onclick = () => {
-        this.setUIAlignment(UIAlignments.BottomLeft);
-      };
-      alignBottomRightButton.onclick = () => {
-        this.setUIAlignment(UIAlignments.BottomRight);
-      };
-      alignTopLeftButton.onclick = () => {
-        this.setUIAlignment(UIAlignments.TopLeft);
-      };
-      alignTopRightButton.onclick = () => {
-        this.setUIAlignment(UIAlignments.TopRight);
-      };
-    }
 
     win.document.body.appendChild(container);
   }
