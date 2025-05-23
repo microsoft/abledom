@@ -14,7 +14,7 @@ export interface ValidationNotification {
   message: string;
   element?: HTMLElement;
   rel?: Node;
-  link?: string;
+  help?: string;
   stack?: string[];
   relStack?: string[];
 }

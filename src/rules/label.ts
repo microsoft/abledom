@@ -157,6 +157,7 @@ export class FocusableElementLabelRule extends ValidationRule {
             id: "focusable-element-label",
             message: "Focusable element must have a non-empty text label.",
             element,
+            help: "https://www.w3.org/WAI/tutorials/forms/labels/",
           }
         : undefined,
       dependsOnIds: new Set(labelledByValues),

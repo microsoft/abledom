@@ -188,12 +188,20 @@ export class NotificationUI {
       .element(svgReveal)
       .closeTag()
       .text(notification.message)
-      .openTag("a", {
-        class: "button close",
-        href: "/",
-        title: "Open help",
-        target: "_blank",
-      })
+      .openTag(
+        "a",
+        {
+          class: "button close",
+          href: notification.help || "/",
+          title: "Open help",
+          target: "_blank",
+        },
+        (help) => {
+          if (!notification.help) {
+            help.style.display = "none";
+          }
+        },
+      )
       .element(svgHelp)
       .closeTag()
       .openTag(

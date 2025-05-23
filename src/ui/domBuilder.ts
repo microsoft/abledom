@@ -7,11 +7,6 @@ export class DOMBuilder {
   private _doc: Document | undefined;
   private _stack: (HTMLElement | DocumentFragment)[];
 
-  // static fromString(parent: HTMLElement | DocumentFragment, html: string): void {
-  //   // const builder = new DOMBuilder(parent);
-
-  // }
-
   constructor(parent: HTMLElement | DocumentFragment) {
     this._doc = parent.ownerDocument;
     this._stack = [parent];
