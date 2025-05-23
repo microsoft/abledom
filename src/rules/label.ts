@@ -58,6 +58,10 @@ export class FocusableElementLabelRule extends ValidationRule {
       }
     }
 
+    if (element.textContent?.trim()) {
+      return true;
+    }
+
     const labelNodes = document.evaluate(
       `(
       .//@aria-label | 
