@@ -4,6 +4,7 @@
  */
 
 export { AbleDOM } from "./core";
+export type { AbleDOMProps } from "./core";
 export { ValidationRule, ValidationRuleType } from "./rules/base";
 export type {
   ValidationResult,

@@ -65,6 +65,8 @@ export class FocusLostRule extends ValidationRule<BlurNotification> {
       return null;
     }
 
+    const doc = win.document;
+
     const targetPosition =
       this._focusedElement === target
         ? this._focusedElementPosition
@@ -80,10 +82,9 @@ export class FocusLostRule extends ValidationRule<BlurNotification> {
       delete this._clearScheduledFocusLost;
 
       if (
-        win.document.body &&
-        (!win.document.activeElement ||
-          win.document.activeElement === win.document.body) &&
-        (!win.document.body.contains(target) || !isElementVisible(target))
+        doc.body &&
+        (!doc.activeElement || doc.activeElement === doc.body) &&
+        (!doc.body.contains(target) || !isElementVisible(target))
       ) {
         this.notify({
           element: target,

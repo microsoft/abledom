@@ -9,6 +9,8 @@ import {
   ValidationRuleType,
 } from "../rules/base";
 
+import type { AbleDOM } from "../core";
+
 // The imports below will become functions that use DOMBuilder to build SVG
 // unrolled by both Vite (in `npm run dev`) and TSUP (in `npm run build`).
 // @ts-expect-error parsed assets
@@ -37,7 +39,9 @@ import svgAlignBottomRight from "./alignbottomright.svg?raw";
 // @ts-expect-error parsed assets
 import svgAlignBottomLeft from "./alignbottomleft.svg?raw";
 
-import { DOMBuilder } from "./domBuilder";
+import { DOMBuilder, HTMLElementWithAbleDOMUIFlag } from "./domBuilder";
+
+export { HTMLElementWithAbleDOMUIFlag };
 
 enum UIAlignments {
   BottomLeft = "bottom-left",
@@ -54,14 +58,7 @@ interface WindowWithAbleDOMDevtools extends Window {
   };
 }
 
-export interface HTMLElementWithAbleDOMUIFlag extends HTMLElement {
-  // A flag to quickly test that the element should be ignored by the validator.
-  __abledomui?: boolean;
-}
-
 export class NotificationUI {
-  private static _notificationsUI: NotificationsUI | undefined;
-
   static setOnToggle(
     instance: NotificationUI,
     onToggle: (notificationUI: NotificationUI, show: boolean) => void,
@@ -69,9 +66,9 @@ export class NotificationUI {
     instance._onToggle = onToggle;
   }
 
-  private static _highlight: ElementHighlighter;
-
   private _win: Window;
+  private _core: AbleDOM;
+  private _notificationsUI: NotificationsUI | undefined;
   private _wrapper: HTMLElementWithAbleDOMUIFlag;
   private _rule: ValidationRule;
   private _onToggle:
@@ -84,23 +81,22 @@ export class NotificationUI {
 
   isHidden = false;
 
-  constructor(win: Window, rule: ValidationRule) {
+  constructor(
+    win: Window,
+    core: AbleDOM,
+    rule: ValidationRule,
+    notificationsUI: NotificationsUI,
+  ) {
     this._win = win;
+    this._core = core;
     this._rule = rule;
-
-    if (!NotificationUI._notificationsUI) {
-      NotificationUI._notificationsUI = new NotificationsUI(this._win);
-    }
+    this._notificationsUI = notificationsUI;
 
     this._wrapper = win.document.createElement(
       "div",
     ) as HTMLElementWithAbleDOMUIFlag;
 
-    if (!NotificationUI._highlight) {
-      NotificationUI._highlight = new ElementHighlighter(win);
-    }
-
-    NotificationUI._notificationsUI.addNotification(this);
+    notificationsUI.addNotification(this);
   }
 
   update(notification: ValidationNotification): void {
@@ -118,11 +114,11 @@ export class NotificationUI {
         { class: "abledom-notification-container" },
         (container) => {
           container.onmouseover = () => {
-            element && NotificationUI._highlight?.highlight(element);
+            element && this._notificationsUI?.highlight(element);
           };
 
           container.onmouseout = () => {
-            NotificationUI._highlight?.hide();
+            this._notificationsUI?.highlight(null);
           };
         },
       )
@@ -143,15 +139,19 @@ export class NotificationUI {
         },
         (logButton) => {
           logButton.onclick = () => {
-            console.error(
+            const { id, message, element, rel, help, ...extra } = notification;
+
+            this._core.log(
               "AbleDOM: ",
+              "\nid:",
+              id,
               "\nmessage:",
-              notification.message,
+              message,
               "\nelement:",
               element,
-              ...(notification.rel ? ["\nrelative:", notification.rel] : []),
-              "\nnotification:",
-              notification,
+              ...(rel ? ["\nrelative:", rel] : []),
+              ...(help ? ["\nhelp:", help] : []),
+              ...(Object.keys(extra).length > 0 ? ["\nextra:", extra] : []),
             );
           };
         },
@@ -165,14 +165,17 @@ export class NotificationUI {
           title: "Reveal in Elements panel",
         },
         (revealButton: HTMLElement) => {
+          const body = win.document.body;
           const hasDevTools =
             !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
               ?.revealElement && false; // Temtorarily disabling the devtools plugin integration.
-          if (hasDevTools && element && win.document.body.contains(element)) {
+
+          if (hasDevTools && element && body.contains(element)) {
             revealButton.onclick = () => {
               const revealElement = (win as WindowWithAbleDOMDevtools)
                 .__ableDOMDevtools?.revealElement;
-              if (revealElement && win.document.body.contains(element)) {
+
+              if (revealElement && body.contains(element)) {
                 revealElement(element).then((revealed: boolean) => {
                   if (!revealed) {
                     // TODO
@@ -213,7 +216,7 @@ export class NotificationUI {
         (closeButton) => {
           closeButton.onclick = () => {
             this.toggle(false);
-            NotificationUI._highlight?.hide();
+            this._notificationsUI?.highlight(null);
           };
         },
       )
@@ -239,14 +242,15 @@ export class NotificationUI {
 
   dispose() {
     this._wrapper.remove();
-    NotificationUI._notificationsUI?.removeNotification(this);
+    this._notificationsUI?.removeNotification(this);
+    delete this._notificationsUI;
   }
 }
 
 export class NotificationsUI {
-  private _container: HTMLElement;
-  private _notificationsContainer: HTMLElement;
-  private _menuElement: HTMLElement;
+  private _container: HTMLElement | undefined;
+  private _notificationsContainer: HTMLElement | undefined;
+  private _menuElement: HTMLElement | undefined;
   private _notificationCountElement: HTMLSpanElement | undefined;
   private _showAllButton: HTMLElement | undefined;
   private _hideAllButton: HTMLElement | undefined;
@@ -258,25 +262,30 @@ export class NotificationsUI {
   private _isMuted = false;
   private _notifications: Set<NotificationUI> = new Set();
 
+  private _highlighter: ElementHighlighter | undefined;
+
   constructor(win: Window) {
+    const doc = win.document;
+
     const container = (this._container =
-      win.document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
+      doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
     container.__abledomui = true;
     container.id = "abledom-report";
 
-    const style = document.createElement("style");
+    const style = doc.createElement("style");
     style.type = "text/css";
-    style.appendChild(document.createTextNode(css));
+    style.appendChild(doc.createTextNode(css));
     container.appendChild(style);
 
     const notificationsContainer = (this._notificationsContainer =
-      win.document.createElement("div")) as HTMLDivElement;
+      doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
+    notificationsContainer.__abledomui = true;
     notificationsContainer.className = "abledom-notifications-container";
     container.appendChild(notificationsContainer);
 
     const menuElement = (this._menuElement =
-      win.document.createElement("div")) as HTMLDivElement;
-
+      doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
+    menuElement.__abledomui = true;
     menuElement.className = "abledom-menu-container";
     container.appendChild(menuElement);
 
@@ -418,10 +427,20 @@ export class NotificationsUI {
       .closeTag()
       .closeTag();
 
-    win.document.body.appendChild(container);
+    doc.body.appendChild(container);
+
+    this._highlighter = new ElementHighlighter(win);
   }
 
   private setUIAlignment(alignment: UIAlignments) {
+    if (
+      !this._container ||
+      !this._notificationsContainer ||
+      !this._menuElement
+    ) {
+      return;
+    }
+
     this._alignBottomLeftButton?.classList.remove(pressedClass);
     this._alignBottomRightButton?.classList.remove(pressedClass);
     this._alignTopLeftButton?.classList.remove(pressedClass);
@@ -465,6 +484,10 @@ export class NotificationsUI {
   }
 
   private _setNotificationsCount(count: number) {
+    if (!this._menuElement) {
+      return;
+    }
+
     const countElement = this._notificationCountElement;
 
     if (countElement && count > 0) {
@@ -509,6 +532,10 @@ export class NotificationsUI {
   }
 
   addNotification(notification: NotificationUI) {
+    if (!this._notificationsContainer) {
+      throw new Error("NotificationsUI is not initialized");
+    }
+
     if (this._notifications.has(notification)) {
       return;
     }
@@ -539,6 +566,7 @@ export class NotificationsUI {
 
     this._setNotificationsCount(this._notifications.size);
     this._setShowHideButtonsVisibility();
+    this.highlight(null);
   }
 
   hideAll() {
@@ -554,11 +582,31 @@ export class NotificationsUI {
     });
     this._setShowHideButtonsVisibility();
   }
+
+  highlight(element: HTMLElement | null) {
+    this._highlighter?.highlight(element);
+  }
+
+  dispose() {
+    this._highlighter?.dispose();
+    this._container?.remove();
+    delete this._highlighter;
+    delete this._container;
+    delete this._notificationsContainer;
+    delete this._menuElement;
+    delete this._notificationCountElement;
+    delete this._showAllButton;
+    delete this._hideAllButton;
+    delete this._alignBottomLeftButton;
+    delete this._alignTopLeftButton;
+    delete this._alignTopRightButton;
+    delete this._alignBottomRightButton;
+  }
 }
 
 class ElementHighlighter {
-  private _window: Window;
-  private _container: HTMLElement;
+  private _window: Window | undefined;
+  private _container: HTMLElement | undefined;
 
   constructor(win: Window) {
     this._window = win;
@@ -569,19 +617,25 @@ class ElementHighlighter {
     container.className = "abledom-highlight";
   }
 
-  highlight(element: HTMLElement) {
-    const rect = element.getBoundingClientRect();
-
-    if (rect.width === 0 || rect.height === 0) {
+  highlight(element: HTMLElement | null) {
+    if (!element) {
+      this._container && (this._container.style.display = "none");
       return;
     }
 
     const win = this._window;
     const container = this._container;
+    const rect = element.getBoundingClientRect();
+
+    if (!win || !container || rect.width === 0 || rect.height === 0) {
+      return;
+    }
+
+    const body = win.document.body;
     const style = container.style;
 
-    if (container.parentElement !== win.document.body) {
-      win.document.body.appendChild(container);
+    if (container.parentElement !== body) {
+      body.appendChild(container);
     }
 
     style.width = `${rect.width}px`;
@@ -592,8 +646,10 @@ class ElementHighlighter {
     container.style.display = "block";
   }
 
-  hide() {
-    this._container.style.display = "none";
+  dispose() {
+    this._container?.remove();
+    delete this._container;
+    delete this._window;
   }
 }
 

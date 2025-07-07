@@ -5,6 +5,7 @@
 
 import {
   NotificationUI,
+  NotificationsUI,
   HTMLElementWithAbleDOMUIFlag,
   isAbleDOMUIElement,
 } from "./ui/ui";
@@ -17,8 +18,13 @@ interface HTMLElementWithAbleDOM extends HTMLElement {
   };
 }
 
+export interface AbleDOMProps {
+  log?: typeof console.error;
+}
+
 export class AbleDOM {
   private _win: Window;
+  private _props: AbleDOMProps | undefined = undefined;
   private _observer: MutationObserver;
   private _clearValidationTimeout: (() => void) | undefined;
   private _elementsWithNotifications: Set<HTMLElementWithAbleDOM> = new Set();
@@ -29,15 +35,19 @@ export class AbleDOM {
   private _rules: ValidationRule[] = [];
   private _startFunc: (() => void) | undefined;
   private _isStarted = false;
+  private _notificationsUI: NotificationsUI | undefined;
 
-  constructor(win: Window) {
+  constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
+    this._props = props;
 
     const _elementsToValidate: Set<HTMLElementWithAbleDOM> = new Set();
     const _elementsToRemove: Set<HTMLElementWithAbleDOM> = new Set();
 
-    win.document.addEventListener("focusin", this._onFocusIn, true);
-    win.document.addEventListener("focusout", this._onFocusOut, true);
+    const doc = win.document;
+
+    doc.addEventListener("focusin", this._onFocusIn, true);
+    doc.addEventListener("focusout", this._onFocusOut, true);
 
     this._observer = new MutationObserver((mutations) => {
       for (let mutation of mutations) {
@@ -91,14 +101,15 @@ export class AbleDOM {
     this._startFunc = () => {
       delete this._startFunc;
 
-      this._observer.observe(win.document, {
+      this._observer.observe(doc, {
         childList: true,
         subtree: true,
         attributes: true,
+        characterData: true,
       });
 
       // Initial validation.
-      findTargets(win.document.body, false);
+      findTargets(doc.body, false);
       this._validate(_elementsToValidate);
       _elementsToValidate.clear();
     };
@@ -136,7 +147,7 @@ export class AbleDOM {
 
       addTarget(node as HTMLElement, removed);
 
-      const walker = win.document.createTreeWalker(
+      const walker = doc.createTreeWalker(
         node,
         NodeFilter.SHOW_ELEMENT,
         (node: Node): number => {
@@ -205,6 +216,10 @@ export class AbleDOM {
     rule: ValidationRule,
     notification: ValidationNotification,
   ) {
+    if (!this._notificationsUI) {
+      this._notificationsUI = new NotificationsUI(this._win);
+    }
+
     const element = notification?.element as HTMLElementWithAbleDOM | undefined;
 
     if (!notification) {
@@ -230,13 +245,23 @@ export class AbleDOM {
       notificationUI = notifications.get(rule);
 
       if (!notificationUI) {
-        notificationUI = new NotificationUI(this._win, rule);
+        notificationUI = new NotificationUI(
+          this._win,
+          this,
+          rule,
+          this._notificationsUI,
+        );
         notifications.set(rule, notificationUI);
       }
 
       this._elementsWithNotifications.add(element);
     } else {
-      notificationUI = new NotificationUI(this._win, rule);
+      notificationUI = new NotificationUI(
+        this._win,
+        this,
+        rule,
+        this._notificationsUI,
+      );
     }
 
     notificationUI.update(notification);
@@ -421,6 +446,14 @@ export class AbleDOM {
     this._addNotification(rule, notification);
   };
 
+  log: typeof console.error = (...args) => {
+    return (
+      this._props?.log ||
+      // In a multi-window application, just `console.error` could belong to a different window.
+      (this._win as Window & { console: Console })?.console?.error
+    )?.apply(null, args);
+  };
+
   addRule(rule: ValidationRule): void {
     this._rules.push(rule);
   }
@@ -451,8 +484,10 @@ export class AbleDOM {
   }
 
   dispose() {
-    this._win.document.addEventListener("focusin", this._onFocusIn, true);
-    this._win.document.addEventListener("focusout", this._onFocusOut, true);
+    const doc = this._win.document;
+
+    doc.addEventListener("focusin", this._onFocusIn, true);
+    doc.addEventListener("focusout", this._onFocusOut, true);
 
     this._remove(this._elementsWithNotifications);
     this._elementsWithNotifications.clear();
@@ -460,6 +495,9 @@ export class AbleDOM {
     this._dependantIdsByElement.clear();
     this._elementsDependingOnId.clear();
     this._idByElement.clear();
+
+    this._notificationsUI?.dispose();
+    delete this._notificationsUI;
 
     this._clearValidationTimeout?.();
 

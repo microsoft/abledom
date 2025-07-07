@@ -3,6 +3,16 @@
  * Licensed under the MIT License.
  */
 
+export interface HTMLElementWithAbleDOMUIFlag extends HTMLElement {
+  // A flag to quickly test that the element should be ignored by the validator.
+  __abledomui?: boolean;
+}
+
+export interface TextNodeWithAbleDOMUIFlag extends Text {
+  // A flag to quickly test that the element should be ignored by the validator.
+  __abledomui?: boolean;
+}
+
 export class DOMBuilder {
   private _doc: Document | undefined;
   private _stack: (HTMLElement | DocumentFragment)[];
@@ -23,9 +33,11 @@ export class DOMBuilder {
       namespace
         ? this._doc?.createElementNS(namespace, tagName)
         : this._doc?.createElement(tagName)
-    ) as HTMLElement;
+    ) as HTMLElementWithAbleDOMUIFlag;
 
     if (parent && element) {
+      element.__abledomui = true;
+
       if (attributes) {
         for (const [key, value] of Object.entries(attributes)) {
           if (key === "class") {
@@ -61,7 +73,14 @@ export class DOMBuilder {
   }
 
   text(text: string): DOMBuilder {
-    this._stack[0]?.appendChild(document.createTextNode(text));
+    const textNode: TextNodeWithAbleDOMUIFlag | undefined =
+      this._doc?.createTextNode(text);
+
+    if (textNode) {
+      textNode.__abledomui = true;
+      this._stack[0]?.appendChild(textNode);
+    }
+
     return this;
   }
 

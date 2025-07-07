@@ -32,7 +32,7 @@ export class ExistingIdRule extends ValidationRule {
     }
 
     for (const id of ids) {
-      if (document.getElementById(id)) {
+      if (element.ownerDocument.getElementById(id)) {
         return {
           dependsOnIds: new Set(ids),
         };

@@ -36,7 +36,7 @@ export abstract class ValidationRule<
   private _window?: Window;
   private _exceptions: ((element: HTMLElement) => boolean)[] = [];
   private _onNotification:
-    | ((rult: ValidationRule<N>, notification: N) => void)
+    | ((rule: ValidationRule<N>, notification: N) => void)
     | undefined;
 
   static init(

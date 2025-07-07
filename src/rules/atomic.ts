@@ -15,7 +15,7 @@ export class AtomicRule extends ValidationRule {
   }
 
   validate(element: HTMLElement): ValidationResult | null {
-    const parentAtomic = document
+    const parentAtomic = element.ownerDocument
       .evaluate(
         `ancestor::*[
           @role = 'button' or 

@@ -27,6 +27,8 @@ export class BadFocusRule extends ValidationRule {
       return null;
     }
 
+    const doc = win.document;
+
     this._lastBlurStack = getStackTrace();
 
     this._clearCheckTimer?.();
@@ -35,13 +37,13 @@ export class BadFocusRule extends ValidationRule {
       delete this._clearCheckTimer;
 
       if (
-        document.activeElement &&
-        !isElementVisible(document.activeElement as HTMLElement)
+        doc.activeElement &&
+        !isElementVisible(doc.activeElement as HTMLElement)
       ) {
         this.notify({
           id: "bad-focus",
           message: "Focused stolen by invisible element.",
-          element: document.activeElement as HTMLElement,
+          element: doc.activeElement as HTMLElement,
           stack: this._lastBlurStack,
           relStack: this._lastFocusStack,
         });

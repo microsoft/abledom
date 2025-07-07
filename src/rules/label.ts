@@ -31,7 +31,7 @@ export class FocusableElementLabelRule extends ValidationRule {
   anchored = true;
 
   private _isAriaHidden(element: HTMLElement): boolean {
-    return document.evaluate(
+    return element.ownerDocument.evaluate(
       `ancestor-or-self::*[@aria-hidden = 'true' or @hidden]`,
       element,
       null,
@@ -62,7 +62,7 @@ export class FocusableElementLabelRule extends ValidationRule {
       return true;
     }
 
-    const labelNodes = document.evaluate(
+    const labelNodes = element.ownerDocument.evaluate(
       `(
       .//@aria-label | 
       .//text() | 
@@ -93,6 +93,8 @@ export class FocusableElementLabelRule extends ValidationRule {
   }
 
   validate(element: HTMLElement): ValidationResult | null {
+    const doc = element.ownerDocument;
+
     if (element.tagName === "INPUT") {
       const type = (element as HTMLInputElement).type;
 
@@ -125,7 +127,7 @@ export class FocusableElementLabelRule extends ValidationRule {
       return null;
     }
 
-    const labelledByNodes = document.evaluate(
+    const labelledByNodes = doc.evaluate(
       `.//@aria-labelledby[not(ancestor-or-self::*[@aria-hidden = 'true' or @hidden])]`,
       element,
       null,
@@ -146,7 +148,7 @@ export class FocusableElementLabelRule extends ValidationRule {
     }
 
     for (const id of labelledByValues) {
-      const labelElement = document.getElementById(id);
+      const labelElement = doc.getElementById(id);
 
       if (labelElement && this._hasLabel(labelElement)) {
         return {
