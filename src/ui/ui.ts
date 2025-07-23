@@ -181,7 +181,7 @@ export class NotificationUI {
 
           if (element) {
             revealButton.onclick = () => {
-              element.scrollIntoView();
+              element.scrollIntoView({ block: "center" });
               this._notificationsUI?.highlight(element);
             };
           } else {
