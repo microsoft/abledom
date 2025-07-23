@@ -13,7 +13,19 @@ import {
 
 console.log("Test Page 1 script loaded");
 
-const ableDOM = new AbleDOM(window);
+const ableDOM = new AbleDOM(window, {
+  bugReport: {
+    isVisible: (notification) => {
+      return notification.id === "focusable-element-label";
+    },
+    onClick: (notification) => {
+      alert(notification.id);
+    },
+    getTitle(notification) {
+      return `Custom report bug button title for ${notification.id}`;
+    },
+  },
+});
 ableDOM.addRule(new FocusableElementLabelRule());
 ableDOM.addRule(new AtomicRule());
 ableDOM.addRule(new ExistingIdRule());

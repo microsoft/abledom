@@ -23,6 +23,8 @@ import svgHelp from "./help.svg?raw";
 import svgLog from "./log.svg?raw";
 // @ts-expect-error parsed assets
 import svgReveal from "./reveal.svg?raw";
+// @ts-expect-error parsed assets
+import svgBugReport from "./bug.svg?raw";
 
 // @ts-expect-error parsed assets
 import svgHideAll from "./hideall.svg?raw";
@@ -39,9 +41,21 @@ import svgAlignBottomRight from "./alignbottomright.svg?raw";
 // @ts-expect-error parsed assets
 import svgAlignBottomLeft from "./alignbottomleft.svg?raw";
 
-import { DOMBuilder, HTMLElementWithAbleDOMUIFlag } from "./domBuilder";
+import { DOMBuilder } from "./domBuilder";
+
+import type { HTMLElementWithAbleDOMUIFlag } from "./domBuilder";
 
 export { HTMLElementWithAbleDOMUIFlag };
+
+export interface BugReportProperty {
+  isVisible: (notification: ValidationNotification) => boolean;
+  onClick: (notification: ValidationNotification) => void;
+  getTitle?: (notification: ValidationNotification) => string;
+}
+
+export interface NotificationsUIProps {
+  bugReport?: BugReportProperty;
+}
 
 enum UIAlignments {
   BottomLeft = "bottom-left",
@@ -52,11 +66,11 @@ enum UIAlignments {
 
 const pressedClass = "pressed";
 
-interface WindowWithAbleDOMDevtools extends Window {
-  __ableDOMDevtools?: {
-    revealElement?: (element: HTMLElement) => Promise<boolean>;
-  };
-}
+// interface WindowWithAbleDOMDevtools extends Window {
+//   __ableDOMDevtools?: {
+//     revealElement?: (element: HTMLElement) => Promise<boolean>;
+//   };
+// }
 
 export class NotificationUI {
   static setOnToggle(
@@ -66,7 +80,6 @@ export class NotificationUI {
     instance._onToggle = onToggle;
   }
 
-  private _win: Window;
   private _core: AbleDOM;
   private _notificationsUI: NotificationsUI | undefined;
   private _wrapper: HTMLElementWithAbleDOMUIFlag;
@@ -87,7 +100,6 @@ export class NotificationUI {
     rule: ValidationRule,
     notificationsUI: NotificationsUI,
   ) {
-    this._win = win;
     this._core = core;
     this._rule = rule;
     this._notificationsUI = notificationsUI;
@@ -100,7 +112,6 @@ export class NotificationUI {
   }
 
   update(notification: ValidationNotification): void {
-    const win = this._win;
     const rule = this._rule;
     const wrapper = this._wrapper;
     const element = notification.element;
@@ -162,33 +173,70 @@ export class NotificationUI {
         "button",
         {
           class: "button",
-          title: "Reveal in Elements panel",
+          // title: "Reveal in Elements panel",
+          title: "Scroll element into view",
         },
         (revealButton: HTMLElement) => {
-          const body = win.document.body;
-          const hasDevTools =
-            !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
-              ?.revealElement && false; // Temtorarily disabling the devtools plugin integration.
+          const element = notification.element;
 
-          if (hasDevTools && element && body.contains(element)) {
+          if (element) {
             revealButton.onclick = () => {
-              const revealElement = (win as WindowWithAbleDOMDevtools)
-                .__ableDOMDevtools?.revealElement;
-
-              if (revealElement && body.contains(element)) {
-                revealElement(element).then((revealed: boolean) => {
-                  if (!revealed) {
-                    // TODO
-                  }
-                });
-              }
+              element.scrollIntoView();
+              this._notificationsUI?.highlight(element);
             };
           } else {
             revealButton.style.display = "none";
           }
+          // const body = win.document.body;
+          // const hasDevTools =
+          //   !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
+          //     ?.revealElement && false; // Temtorarily disabling the devtools plugin integration.
+
+          // if (hasDevTools && element && body.contains(element)) {
+          //   revealButton.onclick = () => {
+          //     const revealElement = (win as WindowWithAbleDOMDevtools)
+          //       .__ableDOMDevtools?.revealElement;
+
+          //     if (revealElement && body.contains(element)) {
+          //       revealElement(element).then((revealed: boolean) => {
+          //         if (!revealed) {
+          //           // TODO
+          //         }
+          //       });
+          //     }
+          //   };
+          // } else {
+          //   revealButton.style.display = "none";
+          // }
         },
       )
       .element(svgReveal)
+      .closeTag()
+      .openTag(
+        "button",
+        {
+          class: "button",
+          title: "Report bug",
+        },
+        (bugReportButton) => {
+          const bugReport = this._notificationsUI?.bugReport;
+
+          if (bugReport?.isVisible(notification)) {
+            const title = bugReport.getTitle?.(notification);
+
+            if (title) {
+              bugReportButton.title = title;
+            }
+
+            bugReportButton.onclick = () => {
+              bugReport.onClick(notification);
+            };
+          } else {
+            bugReportButton.style.display = "none";
+          }
+        },
+      )
+      .element(svgBugReport)
       .closeTag()
       .text(notification.message)
       .openTag(
@@ -264,7 +312,11 @@ export class NotificationsUI {
 
   private _highlighter: ElementHighlighter | undefined;
 
-  constructor(win: Window) {
+  readonly bugReport: BugReportProperty | undefined;
+
+  constructor(win: Window, props: NotificationsUIProps) {
+    this.bugReport = props.bugReport;
+
     const doc = win.document;
 
     const container = (this._container =
@@ -606,51 +658,105 @@ export class NotificationsUI {
 
 class ElementHighlighter {
   private _window: Window | undefined;
-  private _container: HTMLElement | undefined;
+  private _container: HTMLElementWithAbleDOMUIFlag | undefined;
+  private _element: HTMLElement | undefined;
+  private _cancelScrollTimer: (() => void) | undefined;
+  private _intersectionObserver: IntersectionObserver | undefined;
 
   constructor(win: Window) {
     this._window = win;
 
-    const container = (this._container =
-      win.document.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
+    const container: HTMLElementWithAbleDOMUIFlag = (this._container =
+      win.document.createElement("div"));
     container.__abledomui = true;
     container.className = "abledom-highlight";
+
+    new DOMBuilder(container)
+      .openTag("div", { class: "abledom-highlight-border1" })
+      .closeTag()
+      .openTag("div", { class: "abledom-highlight-border2" })
+      .closeTag();
+
+    win.addEventListener("scroll", this._onScroll, true);
   }
 
   highlight(element: HTMLElement | null) {
     if (!element) {
-      this._container && (this._container.style.display = "none");
+      delete this._element;
+      this._unobserve();
+      this._hide();
       return;
     }
 
     const win = this._window;
     const container = this._container;
-    const rect = element.getBoundingClientRect();
 
-    if (!win || !container || rect.width === 0 || rect.height === 0) {
+    if (!win || !container) {
       return;
     }
 
-    const body = win.document.body;
-    const style = container.style;
+    this._element = element;
 
-    if (container.parentElement !== body) {
-      body.appendChild(container);
-    }
+    this._intersectionObserver = new IntersectionObserver(([entry]) => {
+      if (entry) {
+        const rect = entry.boundingClientRect;
 
-    style.width = `${rect.width}px`;
-    style.height = `${rect.height}px`;
-    style.top = `${rect.top}px`;
-    style.left = `${rect.left}px`;
+        const body = win.document.body;
+        const style = container.style;
 
-    container.style.display = "block";
+        if (container.parentElement !== body) {
+          body.appendChild(container);
+        }
+
+        style.width = `${rect.width}px`;
+        style.height = `${rect.height}px`;
+        style.top = `${rect.top}px`;
+        style.left = `${rect.left}px`;
+
+        container.style.display = "block";
+      }
+    });
+
+    this._intersectionObserver.observe(element);
   }
 
   dispose() {
+    this._unobserve();
+    this._cancelScrollTimer?.();
+    this._window?.removeEventListener("scroll", this._onScroll, true);
     this._container?.remove();
+    delete this._element;
     delete this._container;
     delete this._window;
   }
+
+  private _hide() {
+    this._container && (this._container.style.display = "none");
+  }
+
+  private _unobserve() {
+    this._intersectionObserver?.disconnect();
+    delete this._intersectionObserver;
+  }
+
+  private _onScroll = () => {
+    this._cancelScrollTimer?.();
+    this._hide();
+
+    const win = this._window;
+
+    if (win) {
+      const scrollTimer = win.setTimeout(() => {
+        delete this._cancelScrollTimer;
+        this.highlight(this._element || null);
+      }, 100);
+
+      this._cancelScrollTimer = () => {
+        delete this._cancelScrollTimer;
+        win.clearTimeout(scrollTimer);
+      };
+    }
+  };
 }
 
 export function isAbleDOMUIElement(element: HTMLElement): boolean {

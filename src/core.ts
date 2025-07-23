@@ -20,6 +20,11 @@ interface HTMLElementWithAbleDOM extends HTMLElement {
 
 export interface AbleDOMProps {
   log?: typeof console.error;
+  bugReport?: {
+    isVisible: (notification: ValidationNotification) => boolean;
+    onClick: (notification: ValidationNotification) => void;
+    getTitle?: (notification: ValidationNotification) => string;
+  };
 }
 
 export class AbleDOM {
@@ -217,7 +222,9 @@ export class AbleDOM {
     notification: ValidationNotification,
   ) {
     if (!this._notificationsUI) {
-      this._notificationsUI = new NotificationsUI(this._win);
+      this._notificationsUI = new NotificationsUI(this._win, {
+        bugReport: this._props?.bugReport,
+      });
     }
 
     const element = notification?.element as HTMLElementWithAbleDOM | undefined;
