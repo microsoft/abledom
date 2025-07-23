@@ -124,11 +124,11 @@ export class NotificationUI {
         "div",
         { class: "abledom-notification-container" },
         (container) => {
-          container.onmouseover = () => {
+          container.onmouseenter = () => {
             element && this._notificationsUI?.highlight(element);
           };
 
-          container.onmouseout = () => {
+          container.onmouseleave = () => {
             this._notificationsUI?.highlight(null);
           };
         },
