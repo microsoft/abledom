@@ -29,8 +29,6 @@ jobs:
       - run: npm run format
       - name: "Run tests"
         run: npm run test
-      - name: "Run tests"
-        run: npm run test
       - name: "Check for unstaged changes"
         run: |
           git status --porcelain
