@@ -25,6 +25,12 @@
       "abledom": ["src/"]
     }
   },
-  "include": ["src", "test-pages", "vite.config.ts", "tsup.config.ts"],
+  "include": [
+    "src",
+    "tests",
+    "vite.config.ts",
+    "tsup.config.ts",
+    "tests/pages/page1.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }

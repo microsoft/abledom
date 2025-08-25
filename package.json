@@ -25,11 +25,12 @@
     "clean": "rimraf dist",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "lint": "eslint src/ test-pages/ devtools/",
+    "lint": "eslint src/ tests/ devtools/",
     "lint:fix": "npm run lint -- --fix",
     "type-check": "tsc -b tsconfig.json",
     "prepublishOnly": "npm run lint && npm run format && npm run build",
-    "release": "release-it"
+    "release": "release-it",
+    "test": "start-server-and-test dev http://localhost:5173 'playwright test'"
   },
   "repository": {
     "type": "git",
@@ -40,20 +41,23 @@
   },
   "homepage": "https://github.com/microsoft/abledom#readme",
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.32.1",
-    "@typescript-eslint/parser": "^8.32.1",
+    "@playwright/test": "^1.55.0",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
     "@xmldom/xmldom": "^0.9.8",
     "downlevel-dts": "^0.11.0",
     "esbuild-plugin-inline-import": "^1.1.0",
-    "eslint": "^9.26.0",
-    "eslint-config-prettier": "^10.1.5",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-header": "^3.1.1",
-    "eslint-plugin-import": "^2.31.0",
-    "prettier": "^3.5.3",
-    "release-it": "^19.0.2",
+    "eslint-plugin-import": "^2.32.0",
+    "playwright": "^1.55.0",
+    "prettier": "^3.6.2",
+    "release-it": "^19.0.4",
     "rimraf": "^6.0.1",
-    "tsup": "^8.4.0",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "start-server-and-test": "^2.0.13",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
   }
 }

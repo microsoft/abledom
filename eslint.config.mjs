@@ -85,7 +85,7 @@ export default [
     },
   },
   {
-    files: ["src/**/*.{js,ts}", "test-pages/**/*.{js,ts}"],
+    files: ["src/**/*.{js,ts}", "tests/**/*.{js,ts}"],
     languageOptions: {
       ecmaVersion: 5,
       sourceType: "module",

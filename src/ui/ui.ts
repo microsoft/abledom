@@ -84,9 +84,7 @@ export class IssueUI {
   private _issuesUI: IssuesUI | undefined;
   private _wrapper: HTMLElementWithAbleDOMUIFlag;
   private _rule: ValidationRule;
-  private _onToggle:
-    | ((issueUI: IssueUI, show: boolean) => void)
-    | undefined;
+  private _onToggle: ((issueUI: IssueUI, show: boolean) => void) | undefined;
 
   static getElement(instance: IssueUI): HTMLElement {
     return instance._wrapper;
@@ -120,19 +118,15 @@ export class IssueUI {
     wrapper.textContent = "";
 
     new DOMBuilder(wrapper)
-      .openTag(
-        "div",
-        { class: "abledom-issue-container" },
-        (container) => {
-          container.onmouseenter = () => {
-            element && this._issuesUI?.highlight(element);
-          };
+      .openTag("div", { class: "abledom-issue-container" }, (container) => {
+        container.onmouseenter = () => {
+          element && this._issuesUI?.highlight(element);
+        };
 
-          container.onmouseleave = () => {
-            this._issuesUI?.highlight(null);
-          };
-        },
-      )
+        container.onmouseleave = () => {
+          this._issuesUI?.highlight(null);
+        };
+      })
       .openTag("div", {
         class: `abledom-issue${
           rule.type === ValidationRuleType.Warning
@@ -398,15 +392,9 @@ export class IssuesUI {
               muteButton.classList.toggle(pressedClass));
 
             if (isMuted) {
-              muteButton.setAttribute(
-                "title",
-                "Unmute newly appearing issues",
-              );
+              muteButton.setAttribute("title", "Unmute newly appearing issues");
             } else {
-              muteButton.setAttribute(
-                "title",
-                "Mute newly appearing issues",
-              );
+              muteButton.setAttribute("title", "Mute newly appearing issues");
             }
           };
         },
@@ -485,11 +473,7 @@ export class IssuesUI {
   }
 
   private setUIAlignment(alignment: UIAlignments) {
-    if (
-      !this._container ||
-      !this._issuesContainer ||
-      !this._menuElement
-    ) {
+    if (!this._container || !this._issuesContainer || !this._menuElement) {
       return;
     }
 
@@ -597,9 +581,7 @@ export class IssuesUI {
     }
 
     this._issues.add(issue);
-    this._issuesContainer.appendChild(
-      IssueUI.getElement(issue),
-    );
+    this._issuesContainer.appendChild(IssueUI.getElement(issue));
 
     IssueUI.setOnToggle(issue, () => {
       this._setShowHideButtonsVisibility();

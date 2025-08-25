@@ -35,17 +35,12 @@ export abstract class ValidationRule<
   abstract name: string;
   private _window?: Window;
   private _exceptions: ((element: HTMLElement) => boolean)[] = [];
-  private _onIssue:
-    | ((rule: ValidationRule<N>, issue: N) => void)
-    | undefined;
+  private _onIssue: ((rule: ValidationRule<N>, issue: N) => void) | undefined;
 
   static init(
     instance: ValidationRule,
     window: Window,
-    onIssue: (
-      rule: ValidationRule,
-      issue: ValidationIssue,
-    ) => void,
+    onIssue: (rule: ValidationRule, issue: ValidationIssue) => void,
   ): void {
     instance._window = window;
     instance._onIssue = onIssue;
