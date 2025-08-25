@@ -217,10 +217,7 @@ export class AbleDOM {
     }
   }
 
-  private _addIssue(
-    rule: ValidationRule,
-    issue: ValidationIssue,
-  ) {
+  private _addIssue(rule: ValidationRule, issue: ValidationIssue) {
     if (!this._issuesUI) {
       this._issuesUI = new IssuesUI(this._win, {
         bugReport: this._props?.bugReport,
@@ -252,32 +249,19 @@ export class AbleDOM {
       issueUI = issues.get(rule);
 
       if (!issueUI) {
-        issueUI = new IssueUI(
-          this._win,
-          this,
-          rule,
-          this._issuesUI,
-        );
+        issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
         issues.set(rule, issueUI);
       }
 
       this._elementsWithIssues.add(element);
     } else {
-      issueUI = new IssueUI(
-        this._win,
-        this,
-        rule,
-        this._issuesUI,
-      );
+      issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
     }
 
     issueUI.update(issue);
   }
 
-  private _removeIssue(
-    element: HTMLElementWithAbleDOM,
-    rule: ValidationRule,
-  ) {
+  private _removeIssue(element: HTMLElementWithAbleDOM, rule: ValidationRule) {
     if (!rule.anchored) {
       return;
     }

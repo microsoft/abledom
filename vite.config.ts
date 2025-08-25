@@ -16,13 +16,12 @@ export default defineConfig({
     },
   },
   server: {
-    open: "/test-pages/page1/index.html",
+    port: 5173,
   },
   build: {
     rollupOptions: {
       input: {
-        page1: "test-pages/page1/index.html",
-        // page2: 'test-pages/page2/index.html',
+        page1: "tests/pages/page1.html",
       },
     },
   },
@@ -39,8 +38,18 @@ export default defineConfig({
             map: null,
           };
         }
-
         return undefined;
+      },
+    },
+    {
+      name: "custom-index-html",
+      configureServer(server) {
+        server.middlewares.use((req, _, next) => {
+          if (req.url === "/" || req.url === "/index.html") {
+            req.url = "/tests/pages/index.html";
+          }
+          next();
+        });
       },
     },
   ],
