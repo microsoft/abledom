@@ -15,14 +15,14 @@ console.log("Test Page 1 script loaded");
 
 const ableDOM = new AbleDOM(window, {
   bugReport: {
-    isVisible: (notification) => {
-      return notification.id === "focusable-element-label";
+    isVisible: (issue) => {
+      return issue.id === "focusable-element-label";
     },
-    onClick: (notification) => {
-      alert(notification.id);
+    onClick: (issue) => {
+      alert(issue.id);
     },
-    getTitle(notification) {
-      return `Custom report bug button title for ${notification.id}`;
+    getTitle(issue) {
+      return `Custom report bug button title for ${issue.id}`;
     },
   },
 });

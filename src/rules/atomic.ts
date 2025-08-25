@@ -44,7 +44,7 @@ export class AtomicRule extends ValidationRule {
 
     if (parentAtomic) {
       return {
-        notification: {
+        issue: {
           id: "focusable-in-atomic",
           message: "Focusable element inside atomic focusable.",
           element,

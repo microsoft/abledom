@@ -4,7 +4,7 @@
  */
 
 import {
-  ValidationNotification,
+  ValidationIssue,
   ValidationRule,
   ValidationRuleType,
 } from "../rules/base";
@@ -48,12 +48,12 @@ import type { HTMLElementWithAbleDOMUIFlag } from "./domBuilder";
 export { HTMLElementWithAbleDOMUIFlag };
 
 export interface BugReportProperty {
-  isVisible: (notification: ValidationNotification) => boolean;
-  onClick: (notification: ValidationNotification) => void;
-  getTitle?: (notification: ValidationNotification) => string;
+  isVisible: (issue: ValidationIssue) => boolean;
+  onClick: (issue: ValidationIssue) => void;
+  getTitle?: (issue: ValidationIssue) => string;
 }
 
-export interface NotificationsUIProps {
+export interface IssuesUIProps {
   bugReport?: BugReportProperty;
 }
 
@@ -72,23 +72,23 @@ const pressedClass = "pressed";
 //   };
 // }
 
-export class NotificationUI {
+export class IssueUI {
   static setOnToggle(
-    instance: NotificationUI,
-    onToggle: (notificationUI: NotificationUI, show: boolean) => void,
+    instance: IssueUI,
+    onToggle: (issueUI: IssueUI, show: boolean) => void,
   ) {
     instance._onToggle = onToggle;
   }
 
   private _core: AbleDOM;
-  private _notificationsUI: NotificationsUI | undefined;
+  private _issuesUI: IssuesUI | undefined;
   private _wrapper: HTMLElementWithAbleDOMUIFlag;
   private _rule: ValidationRule;
   private _onToggle:
-    | ((notificationUI: NotificationUI, show: boolean) => void)
+    | ((issueUI: IssueUI, show: boolean) => void)
     | undefined;
 
-  static getElement(instance: NotificationUI): HTMLElement {
+  static getElement(instance: IssueUI): HTMLElement {
     return instance._wrapper;
   }
 
@@ -98,23 +98,23 @@ export class NotificationUI {
     win: Window,
     core: AbleDOM,
     rule: ValidationRule,
-    notificationsUI: NotificationsUI,
+    issuesUI: IssuesUI,
   ) {
     this._core = core;
     this._rule = rule;
-    this._notificationsUI = notificationsUI;
+    this._issuesUI = issuesUI;
 
     this._wrapper = win.document.createElement(
       "div",
     ) as HTMLElementWithAbleDOMUIFlag;
 
-    notificationsUI.addNotification(this);
+    issuesUI.addIssue(this);
   }
 
-  update(notification: ValidationNotification): void {
+  update(issue: ValidationIssue): void {
     const rule = this._rule;
     const wrapper = this._wrapper;
-    const element = notification.element;
+    const element = issue.element;
 
     wrapper.__abledomui = true;
     wrapper.textContent = "";
@@ -122,23 +122,23 @@ export class NotificationUI {
     new DOMBuilder(wrapper)
       .openTag(
         "div",
-        { class: "abledom-notification-container" },
+        { class: "abledom-issue-container" },
         (container) => {
           container.onmouseenter = () => {
-            element && this._notificationsUI?.highlight(element);
+            element && this._issuesUI?.highlight(element);
           };
 
           container.onmouseleave = () => {
-            this._notificationsUI?.highlight(null);
+            this._issuesUI?.highlight(null);
           };
         },
       )
       .openTag("div", {
-        class: `abledom-notification${
+        class: `abledom-issue${
           rule.type === ValidationRuleType.Warning
-            ? " abledom-notification_warning"
+            ? " abledom-issue_warning"
             : rule.type === ValidationRuleType.Info
-              ? " abledom-notification_info"
+              ? " abledom-issue_info"
               : ""
         }`,
       })
@@ -150,7 +150,7 @@ export class NotificationUI {
         },
         (logButton) => {
           logButton.onclick = () => {
-            const { id, message, element, rel, help, ...extra } = notification;
+            const { id, message, element, rel, help, ...extra } = issue;
 
             this._core.log(
               "AbleDOM: ",
@@ -177,12 +177,12 @@ export class NotificationUI {
           title: "Scroll element into view",
         },
         (revealButton: HTMLElement) => {
-          const element = notification.element;
+          const element = issue.element;
 
           if (element) {
             revealButton.onclick = () => {
               element.scrollIntoView({ block: "center" });
-              this._notificationsUI?.highlight(element);
+              this._issuesUI?.highlight(element);
             };
           } else {
             revealButton.style.display = "none";
@@ -219,17 +219,17 @@ export class NotificationUI {
           title: "Report bug",
         },
         (bugReportButton) => {
-          const bugReport = this._notificationsUI?.bugReport;
+          const bugReport = this._issuesUI?.bugReport;
 
-          if (bugReport?.isVisible(notification)) {
-            const title = bugReport.getTitle?.(notification);
+          if (bugReport?.isVisible(issue)) {
+            const title = bugReport.getTitle?.(issue);
 
             if (title) {
               bugReportButton.title = title;
             }
 
             bugReportButton.onclick = () => {
-              bugReport.onClick(notification);
+              bugReport.onClick(issue);
             };
           } else {
             bugReportButton.style.display = "none";
@@ -238,17 +238,17 @@ export class NotificationUI {
       )
       .element(svgBugReport)
       .closeTag()
-      .text(notification.message)
+      .text(issue.message)
       .openTag(
         "a",
         {
           class: "button close",
-          href: notification.help || "/",
+          href: issue.help || "/",
           title: "Open help",
           target: "_blank",
         },
         (help) => {
-          if (!notification.help) {
+          if (!issue.help) {
             help.style.display = "none";
           }
         },
@@ -264,7 +264,7 @@ export class NotificationUI {
         (closeButton) => {
           closeButton.onclick = () => {
             this.toggle(false);
-            this._notificationsUI?.highlight(null);
+            this._issuesUI?.highlight(null);
           };
         },
       )
@@ -290,16 +290,16 @@ export class NotificationUI {
 
   dispose() {
     this._wrapper.remove();
-    this._notificationsUI?.removeNotification(this);
-    delete this._notificationsUI;
+    this._issuesUI?.removeIssue(this);
+    delete this._issuesUI;
   }
 }
 
-export class NotificationsUI {
+export class IssuesUI {
   private _container: HTMLElement | undefined;
-  private _notificationsContainer: HTMLElement | undefined;
+  private _issuesContainer: HTMLElement | undefined;
   private _menuElement: HTMLElement | undefined;
-  private _notificationCountElement: HTMLSpanElement | undefined;
+  private _issueCountElement: HTMLSpanElement | undefined;
   private _showAllButton: HTMLElement | undefined;
   private _hideAllButton: HTMLElement | undefined;
   private _alignBottomLeftButton: HTMLElement | undefined;
@@ -308,13 +308,13 @@ export class NotificationsUI {
   private _alignBottomRightButton: HTMLElement | undefined;
 
   private _isMuted = false;
-  private _notifications: Set<NotificationUI> = new Set();
+  private _issues: Set<IssueUI> = new Set();
 
   private _highlighter: ElementHighlighter | undefined;
 
   readonly bugReport: BugReportProperty | undefined;
 
-  constructor(win: Window, props: NotificationsUIProps) {
+  constructor(win: Window, props: IssuesUIProps) {
     this.bugReport = props.bugReport;
 
     const doc = win.document;
@@ -329,11 +329,11 @@ export class NotificationsUI {
     style.appendChild(doc.createTextNode(css));
     container.appendChild(style);
 
-    const notificationsContainer = (this._notificationsContainer =
+    const issuesContainer = (this._issuesContainer =
       doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
-    notificationsContainer.__abledomui = true;
-    notificationsContainer.className = "abledom-notifications-container";
-    container.appendChild(notificationsContainer);
+    issuesContainer.__abledomui = true;
+    issuesContainer.className = "abledom-issues-container";
+    container.appendChild(issuesContainer);
 
     const menuElement = (this._menuElement =
       doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
@@ -346,11 +346,11 @@ export class NotificationsUI {
       .openTag(
         "span",
         {
-          class: "notifications-count",
-          title: "Number of notifications",
+          class: "issues-count",
+          title: "Number of issues",
         },
-        (notificationCountElement) => {
-          this._notificationCountElement = notificationCountElement;
+        (issueCountElement) => {
+          this._issueCountElement = issueCountElement;
         },
       )
       .closeTag()
@@ -358,7 +358,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button",
-          title: "Show all notifications",
+          title: "Show all issues",
         },
         (showAllButton) => {
           this._showAllButton = showAllButton;
@@ -374,7 +374,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button",
-          title: "Hide all notifications",
+          title: "Hide all issues",
         },
         (hideAllButton) => {
           this._hideAllButton = hideAllButton;
@@ -390,7 +390,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button",
-          title: "Mute newly appearing notifications",
+          title: "Mute newly appearing issues",
         },
         (muteButton) => {
           muteButton.onclick = () => {
@@ -400,12 +400,12 @@ export class NotificationsUI {
             if (isMuted) {
               muteButton.setAttribute(
                 "title",
-                "Unmute newly appearing notifications",
+                "Unmute newly appearing issues",
               );
             } else {
               muteButton.setAttribute(
                 "title",
-                "Mute newly appearing notifications",
+                "Mute newly appearing issues",
               );
             }
           };
@@ -417,7 +417,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button align-button align-button-first pressed",
-          title: "Attach notifications to bottom left",
+          title: "Attach issues to bottom left",
         },
         (alignBottomLeftButton) => {
           this._alignBottomLeftButton = alignBottomLeftButton;
@@ -433,7 +433,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button align-button",
-          title: "Attach notifications to top left",
+          title: "Attach issues to top left",
         },
         (alignTopLeftButton) => {
           this._alignTopLeftButton = alignTopLeftButton;
@@ -449,7 +449,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button align-button",
-          title: "Attach notifications to top right",
+          title: "Attach issues to top right",
         },
         (alignTopRightButton) => {
           this._alignTopRightButton = alignTopRightButton;
@@ -465,7 +465,7 @@ export class NotificationsUI {
         "button",
         {
           class: "button align-button align-button-last",
-          title: "Attach notifications to bottom right",
+          title: "Attach issues to bottom right",
         },
         (alignBottomRightButton) => {
           this._alignBottomRightButton = alignBottomRightButton;
@@ -487,7 +487,7 @@ export class NotificationsUI {
   private setUIAlignment(alignment: UIAlignments) {
     if (
       !this._container ||
-      !this._notificationsContainer ||
+      !this._issuesContainer ||
       !this._menuElement
     ) {
       return;
@@ -505,17 +505,17 @@ export class NotificationsUI {
       "abledom-align-bottom",
     );
     let containerClasses: string[] = [];
-    let notificationsFirst = false;
+    let issuesFirst = false;
 
     switch (alignment) {
       case UIAlignments.BottomLeft:
         containerClasses = ["abledom-align-left", "abledom-align-bottom"];
-        notificationsFirst = true;
+        issuesFirst = true;
         this._alignBottomLeftButton?.classList.add(pressedClass);
         break;
       case UIAlignments.BottomRight:
         containerClasses = ["abledom-align-right", "abledom-align-bottom"];
-        notificationsFirst = true;
+        issuesFirst = true;
         this._alignBottomRightButton?.classList.add(pressedClass);
         break;
       case UIAlignments.TopLeft:
@@ -530,17 +530,17 @@ export class NotificationsUI {
 
     this._container.classList.add(...containerClasses);
     this._container.insertBefore(
-      this._notificationsContainer,
-      notificationsFirst ? this._menuElement : null,
+      this._issuesContainer,
+      issuesFirst ? this._menuElement : null,
     );
   }
 
-  private _setNotificationsCount(count: number) {
+  private _setIssuesCount(count: number) {
     if (!this._menuElement) {
       return;
     }
 
-    const countElement = this._notificationCountElement;
+    const countElement = this._issueCountElement;
 
     if (countElement && count > 0) {
       countElement.textContent = "";
@@ -548,7 +548,7 @@ export class NotificationsUI {
         .openTag("strong")
         .text(`${count}`)
         .closeTag()
-        .text(` notification${count > 1 ? "s" : ""}`);
+        .text(` issue${count > 1 ? "s" : ""}`);
 
       this._menuElement.style.display = "block";
     } else {
@@ -567,8 +567,8 @@ export class NotificationsUI {
     let allHidden = true;
     let allVisible = true;
 
-    for (let notification of this._notifications) {
-      if (notification.isHidden) {
+    for (let issue of this._issues) {
+      if (issue.isHidden) {
         allVisible = false;
       } else {
         allHidden = false;
@@ -583,54 +583,54 @@ export class NotificationsUI {
     showAllButton.style.display = allVisible ? "none" : "block";
   }
 
-  addNotification(notification: NotificationUI) {
-    if (!this._notificationsContainer) {
-      throw new Error("NotificationsUI is not initialized");
+  addIssue(issue: IssueUI) {
+    if (!this._issuesContainer) {
+      throw new Error("IssuesUI is not initialized");
     }
 
-    if (this._notifications.has(notification)) {
+    if (this._issues.has(issue)) {
       return;
     }
 
     if (this._isMuted) {
-      notification.toggle(false, true);
+      issue.toggle(false, true);
     }
 
-    this._notifications.add(notification);
-    this._notificationsContainer.appendChild(
-      NotificationUI.getElement(notification),
+    this._issues.add(issue);
+    this._issuesContainer.appendChild(
+      IssueUI.getElement(issue),
     );
 
-    NotificationUI.setOnToggle(notification, () => {
+    IssueUI.setOnToggle(issue, () => {
       this._setShowHideButtonsVisibility();
     });
 
-    this._setNotificationsCount(this._notifications.size);
+    this._setIssuesCount(this._issues.size);
     this._setShowHideButtonsVisibility();
   }
 
-  removeNotification(notification: NotificationUI) {
-    if (!this._notifications.has(notification)) {
+  removeIssue(issue: IssueUI) {
+    if (!this._issues.has(issue)) {
       return;
     }
 
-    this._notifications.delete(notification);
+    this._issues.delete(issue);
 
-    this._setNotificationsCount(this._notifications.size);
+    this._setIssuesCount(this._issues.size);
     this._setShowHideButtonsVisibility();
     this.highlight(null);
   }
 
   hideAll() {
-    this._notifications.forEach((notification) => {
-      notification.toggle(false);
+    this._issues.forEach((issue) => {
+      issue.toggle(false);
     });
     this._setShowHideButtonsVisibility();
   }
 
   showAll() {
-    this._notifications.forEach((notification) => {
-      notification.toggle(true);
+    this._issues.forEach((issue) => {
+      issue.toggle(true);
     });
     this._setShowHideButtonsVisibility();
   }
@@ -644,9 +644,9 @@ export class NotificationsUI {
     this._container?.remove();
     delete this._highlighter;
     delete this._container;
-    delete this._notificationsContainer;
+    delete this._issuesContainer;
     delete this._menuElement;
-    delete this._notificationCountElement;
+    delete this._issueCountElement;
     delete this._showAllButton;
     delete this._hideAllButton;
     delete this._alignBottomLeftButton;

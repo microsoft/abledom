@@ -9,7 +9,7 @@ export enum ValidationRuleType {
   Info,
 }
 
-export interface ValidationNotification {
+export interface ValidationIssue {
   id: string;
   message: string;
   element?: HTMLElement;
@@ -20,35 +20,35 @@ export interface ValidationNotification {
 }
 
 export interface ValidationResult {
-  notification?: ValidationNotification;
+  issue?: ValidationIssue;
   dependsOnIds?: Set<string>;
 }
 
-export interface BlurNotification extends ValidationNotification {
+export interface BlurIssue extends ValidationIssue {
   position?: string[];
 }
 
 export abstract class ValidationRule<
-  N extends ValidationNotification = ValidationNotification,
+  N extends ValidationIssue = ValidationIssue,
 > {
   abstract type: ValidationRuleType;
   abstract name: string;
   private _window?: Window;
   private _exceptions: ((element: HTMLElement) => boolean)[] = [];
-  private _onNotification:
-    | ((rule: ValidationRule<N>, notification: N) => void)
+  private _onIssue:
+    | ((rule: ValidationRule<N>, issue: N) => void)
     | undefined;
 
   static init(
     instance: ValidationRule,
     window: Window,
-    onNotification: (
+    onIssue: (
       rule: ValidationRule,
-      notification: ValidationNotification,
+      issue: ValidationIssue,
     ) => void,
   ): void {
     instance._window = window;
-    instance._onNotification = onNotification;
+    instance._onIssue = onIssue;
   }
 
   static dispose(instance: ValidationRule): void {
@@ -70,7 +70,7 @@ export abstract class ValidationRule<
 
   private dispose(): void {
     this._window = undefined;
-    this._onNotification = undefined;
+    this._onIssue = undefined;
     this._exceptions = [];
   }
 
@@ -111,10 +111,10 @@ export abstract class ValidationRule<
 
   validate?(element: HTMLElement): ValidationResult | null;
 
-  notify(notification: N): void {
-    this._onNotification?.(this, notification);
+  notify(issue: N): void {
+    this._onIssue?.(this, issue);
   }
 
-  focused?(event: FocusEvent): ValidationNotification | null;
-  blurred?(event: FocusEvent): BlurNotification | null;
+  focused?(event: FocusEvent): ValidationIssue | null;
+  blurred?(event: FocusEvent): BlurIssue | null;
 }

@@ -4,9 +4,9 @@
  */
 
 import { isElementVisible, getStackTrace } from "../utils";
-import { BlurNotification, ValidationRule, ValidationRuleType } from "./base";
+import { BlurIssue, ValidationRule, ValidationRuleType } from "./base";
 
-export class FocusLostRule extends ValidationRule<BlurNotification> {
+export class FocusLostRule extends ValidationRule<BlurIssue> {
   type = ValidationRuleType.Error;
   name = "focus-lost";
   anchored = false;

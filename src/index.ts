@@ -8,8 +8,8 @@ export type { AbleDOMProps } from "./core";
 export { ValidationRule, ValidationRuleType } from "./rules/base";
 export type {
   ValidationResult,
-  ValidationNotification,
-  BlurNotification,
+  ValidationIssue,
+  BlurIssue,
 } from "./rules/base";
 export { AtomicRule } from "./rules/atomic";
 export { FocusableElementLabelRule } from "./rules/label";

@@ -158,7 +158,7 @@ export class FocusableElementLabelRule extends ValidationRule {
     }
 
     return {
-      notification: isElementVisible(element)
+      issue: isElementVisible(element)
         ? {
             id: "focusable-element-label",
             message: "Focusable element must have a non-empty text label.",
