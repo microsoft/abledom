@@ -40,7 +40,7 @@ export class ExistingIdRule extends ValidationRule {
     }
 
     return {
-      notification: {
+      issue: {
         id: "missing-id",
         message: `Elements with referenced ids do not extist.`,
         element,

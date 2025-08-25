@@ -27,7 +27,7 @@ export class FindElementRule extends ValidationRule {
     for (const name of Object.keys(this._conditions)) {
       if (this._conditions[name](element)) {
         return {
-          notification: {
+          issue: {
             id: "find-element",
             message: `Element found: ${name}.`,
             element,
