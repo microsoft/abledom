@@ -19,11 +19,7 @@ export default defineConfig({
     port: 5173,
   },
   build: {
-    rollupOptions: {
-      input: {
-        page1: "tests/pages/page1.html",
-      },
-    },
+    rollupOptions: {},
   },
   plugins: [
     {

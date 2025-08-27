@@ -41,6 +41,8 @@ export class AbleDOM {
   private _startFunc: (() => void) | undefined;
   private _isStarted = false;
   private _issuesUI: IssuesUI | undefined;
+  private _idlePromise: Promise<void> | undefined;
+  private _idleResolve: (() => void) | undefined;
 
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
@@ -95,6 +97,7 @@ export class AbleDOM {
         _elementsToRemove.clear();
         _elementsToValidate.clear();
         this._changedElementIds.clear();
+        this._idleResolve?.();
       }, 200); // Defer the validation a bit.
 
       this._clearValidationTimeout = () => {
@@ -437,6 +440,24 @@ export class AbleDOM {
     this._addIssue(rule, issue);
   };
 
+  idle(): Promise<void> {
+    if (!this._clearValidationTimeout) {
+      return Promise.resolve();
+    }
+
+    if (!this._idlePromise) {
+      this._idlePromise = new Promise((resolve) => {
+        this._idleResolve = () => {
+          delete this._idlePromise;
+          delete this._idleResolve;
+          resolve();
+        };
+      });
+    }
+
+    return this._idlePromise;
+  }
+
   log: typeof console.error = (...args) => {
     return (
       this._props?.log ||
@@ -491,6 +512,7 @@ export class AbleDOM {
     delete this._issuesUI;
 
     this._clearValidationTimeout?.();
+    this._idleResolve?.();
 
     for (const rule of this._rules) {
       rule.stop?.();
