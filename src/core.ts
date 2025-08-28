@@ -25,6 +25,20 @@ export interface AbleDOMProps {
     onClick: (issue: ValidationIssue) => void;
     getTitle?: (issue: ValidationIssue) => string;
   };
+  headless?: boolean;
+  callbacks?: {
+    onIssueAdded?(
+      element: HTMLElement | null,
+      rule: ValidationRule,
+      issue: ValidationIssue,
+    ): void;
+    onIssueUpdated?(
+      element: HTMLElement | null,
+      rule: ValidationRule,
+      issue: ValidationIssue,
+    ): void;
+    onIssueRemoved?(element: HTMLElement | null, rule: ValidationRule): void;
+  };
 }
 
 export class AbleDOM {
@@ -224,6 +238,7 @@ export class AbleDOM {
     if (!this._issuesUI) {
       this._issuesUI = new IssuesUI(this._win, {
         bugReport: this._props?.bugReport,
+        headless: this._props?.headless,
       });
     }
 
@@ -235,6 +250,7 @@ export class AbleDOM {
     }
 
     let issueUI: IssueUI | undefined;
+    let justUpdate = true;
 
     if (rule.anchored && element) {
       let abledomOnElement = element.__abledom;
@@ -254,14 +270,26 @@ export class AbleDOM {
       if (!issueUI) {
         issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
         issues.set(rule, issueUI);
+        justUpdate = false;
+        this._props?.callbacks?.onIssueAdded?.(element, rule, issue);
       }
 
       this._elementsWithIssues.add(element);
     } else {
       issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
+      justUpdate = false;
+      this._props?.callbacks?.onIssueAdded?.(null, rule, issue);
     }
 
     issueUI.update(issue);
+
+    if (justUpdate) {
+      this._props?.callbacks?.onIssueUpdated?.(
+        rule.anchored && element ? element : null,
+        rule,
+        issue,
+      );
+    }
   }
 
   private _removeIssue(element: HTMLElementWithAbleDOM, rule: ValidationRule) {
@@ -280,6 +308,7 @@ export class AbleDOM {
     if (issue) {
       issue.dispose();
       issues.delete(rule);
+      this._props?.callbacks?.onIssueRemoved?.(element, rule);
     }
 
     if (issues.size === 0) {

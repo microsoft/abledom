@@ -55,6 +55,7 @@ export interface BugReportProperty {
 
 export interface IssuesUIProps {
   bugReport?: BugReportProperty;
+  headless?: boolean;
 }
 
 enum UIAlignments {
@@ -82,11 +83,11 @@ export class IssueUI {
 
   private _core: AbleDOM;
   private _issuesUI: IssuesUI | undefined;
-  private _wrapper: HTMLElementWithAbleDOMUIFlag;
+  private _wrapper: HTMLElementWithAbleDOMUIFlag | undefined;
   private _rule: ValidationRule;
   private _onToggle: ((issueUI: IssueUI, show: boolean) => void) | undefined;
 
-  static getElement(instance: IssueUI): HTMLElement {
+  static getElement(instance: IssueUI): HTMLElement | undefined {
     return instance._wrapper;
   }
 
@@ -102,9 +103,11 @@ export class IssueUI {
     this._rule = rule;
     this._issuesUI = issuesUI;
 
-    this._wrapper = win.document.createElement(
-      "div",
-    ) as HTMLElementWithAbleDOMUIFlag;
+    if (!issuesUI.headless) {
+      this._wrapper = win.document.createElement(
+        "div",
+      ) as HTMLElementWithAbleDOMUIFlag;
+    }
 
     issuesUI.addIssue(this);
   }
@@ -113,6 +116,10 @@ export class IssueUI {
     const rule = this._rule;
     const wrapper = this._wrapper;
     const element = issue.element;
+
+    if (!wrapper) {
+      return;
+    }
 
     wrapper.__abledomui = true;
     wrapper.textContent = "";
@@ -269,6 +276,10 @@ export class IssueUI {
   }
 
   toggle(show: boolean, initial = false) {
+    if (!this._wrapper) {
+      return;
+    }
+
     this.isHidden = !show;
 
     if (!initial) {
@@ -283,7 +294,7 @@ export class IssueUI {
   }
 
   dispose() {
-    this._wrapper.remove();
+    this._wrapper?.remove();
     this._issuesUI?.removeIssue(this);
     delete this._issuesUI;
   }
@@ -307,9 +318,15 @@ export class IssuesUI {
   private _highlighter: ElementHighlighter | undefined;
 
   readonly bugReport: BugReportProperty | undefined;
+  readonly headless: boolean;
 
   constructor(win: Window, props: IssuesUIProps) {
     this.bugReport = props.bugReport;
+    this.headless = !!props.headless;
+
+    if (this.headless) {
+      return;
+    }
 
     const doc = win.document;
 
@@ -568,20 +585,26 @@ export class IssuesUI {
   }
 
   addIssue(issue: IssueUI) {
-    if (!this._issuesContainer) {
-      throw new Error("IssuesUI is not initialized");
-    }
-
     if (this._issues.has(issue)) {
       return;
+    }
+
+    this._issues.add(issue);
+
+    if (this.headless) {
+      return;
+    }
+
+    if (!this._issuesContainer) {
+      throw new Error("IssuesUI is not initialized");
     }
 
     if (this._isMuted) {
       issue.toggle(false, true);
     }
 
-    this._issues.add(issue);
-    this._issuesContainer.appendChild(IssueUI.getElement(issue));
+    const issueUIWraper = IssueUI.getElement(issue);
+    issueUIWraper && this._issuesContainer.appendChild(issueUIWraper);
 
     IssueUI.setOnToggle(issue, () => {
       this._setShowHideButtonsVisibility();
