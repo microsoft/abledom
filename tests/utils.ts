@@ -89,6 +89,7 @@ export async function awaitIdle(page: Page): Promise<void> {
 
 export async function getIssuesCount(page: Page): Promise<number> {
   const issues = await page.$$(issueSelector);
+
   return issues.length;
 }
 
