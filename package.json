@@ -30,7 +30,7 @@
     "type-check": "tsc -b tsconfig.json",
     "prepublishOnly": "npm run lint && npm run format && npm run build",
     "release": "release-it",
-    "test": "start-server-and-test dev http://localhost:5173 'playwright test'"
+    "test": "start-server-and-test dev http://localhost:5173 'playwright test --ui'"
   },
   "repository": {
     "type": "git",

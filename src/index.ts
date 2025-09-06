@@ -13,6 +13,7 @@ export type {
 } from "./rules/base";
 export { AtomicRule } from "./rules/atomic";
 export { FocusableElementLabelRule } from "./rules/label";
+export { ContrastRule } from "./rules/contrast";
 export { ExistingIdRule } from "./rules/existingid";
 export { FocusLostRule } from "./rules/focuslost";
 export { BadFocusRule } from "./rules/badfocus";
