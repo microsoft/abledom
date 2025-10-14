@@ -58,13 +58,19 @@ export class ContrastRule extends ValidationRule {
   }
 
   validate(element: HTMLElement): ValidationResult | null {
-    const style = window.getComputedStyle(element);
+    const win = this.window;
+
+    if (!win) {
+      return null;
+    }
+
+    const style = win.getComputedStyle(element);
     const fg = parseColor(style.color);
     let bg: [number, number, number] | null = null;
     let el: HTMLElement | null = element;
     // Walk up the tree to find a non-transparent background
     while (el && !bg) {
-      const bgColor = window.getComputedStyle(el).backgroundColor;
+      const bgColor = win.getComputedStyle(el).backgroundColor;
       if (
         bgColor &&
         bgColor !== "rgba(0, 0, 0, 0)" &&
