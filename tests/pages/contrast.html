@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Page 1</title>
+  </head>
+  <body>
+    <h1>Test Page 1</h1>
+    <script type="module" src="./contrast.ts"></script>
+
+    <div style="background-color: rgb(31, 31, 31)">
+      <div style="color: rgb(255, 255, 255)">
+        <button
+          id="button"
+          aria-hidden="false"
+          aria-describedby="aollll sdf"
+          style="background-color: rgba(0, 0, 0, 0); color: rgb(0, 0, 0)"
+        >
+          <span style="color: #fff">
+            <div>Shouldn't be warned.</div>
+          </span>
+        </button>
+      </div>
+    </div>
+    <button
+      id="button"
+      aria-hidden="false"
+      aria-describedby="aollll sdf"
+      style="background-color: rgba(0, 0, 0); color: rgb(0, 0, 0)"
+    >
+      <div>Should be warned.</div>
+    </button>
+  </body>
+</html>

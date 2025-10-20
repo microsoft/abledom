@@ -25,7 +25,10 @@ function parseColor(color: string): [number, number, number] | null {
   if (color.startsWith("#")) {
     return hexToRgb(color);
   }
-  const rgbMatch = color.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+
+  const rgbMatch = color.match(
+    /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/,
+  );
   if (rgbMatch) {
     return [
       parseInt(rgbMatch[1], 10),
@@ -48,13 +51,44 @@ function contrastRatio(l1: number, l2: number): number {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
+function isTransparent(color: string): boolean {
+  if (!color) {
+    return true;
+  }
+
+  color = color.trim();
+
+  if (color === "transparent" || color === "rgba(0, 0, 0, 0)") {
+    return true;
+  }
+
+  const rgbaMatch = color.match(/^rgba?\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)$/);
+  if (rgbaMatch && parseFloat(rgbaMatch[1]) === 0) {
+    return true;
+  }
+
+  return false;
+}
+
 export class ContrastRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "ContrastRule";
   anchored = true;
 
   accept(element: HTMLElement): boolean {
-    return isElementVisible(element) && !!element.textContent?.trim();
+    if (!isElementVisible(element)) {
+      return false;
+    }
+
+    const hasDirectTextContent = Array.from(element.childNodes).some((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.trim();
+        return text && text.length > 0;
+      }
+      return false;
+    });
+
+    return hasDirectTextContent;
   }
 
   validate(element: HTMLElement): ValidationResult | null {
@@ -66,41 +100,83 @@ export class ContrastRule extends ValidationRule {
 
     const style = win.getComputedStyle(element);
     const fg = parseColor(style.color);
+
+    if (!fg) {
+      return null;
+    }
+
+    const hasChildWithDifferentColor = Array.from(element.children).some(
+      (child) => {
+        if (child instanceof HTMLElement && child.textContent?.trim()) {
+          const childStyle = win.getComputedStyle(child);
+          const childColor = parseColor(childStyle.color);
+          if (
+            childColor &&
+            (childColor[0] !== fg[0] ||
+              childColor[1] !== fg[1] ||
+              childColor[2] !== fg[2])
+          ) {
+            return true;
+          }
+        }
+        return false;
+      },
+    );
+
+    if (hasChildWithDifferentColor) {
+      return null;
+    }
+
     let bg: [number, number, number] | null = null;
     let el: HTMLElement | null = element;
-    // Walk up the tree to find a non-transparent background
-    while (el && !bg) {
+    let depth = 0;
+    const maxDepth = 50;
+
+    while (el && depth < maxDepth) {
       const bgColor = win.getComputedStyle(el).backgroundColor;
-      if (
-        bgColor &&
-        bgColor !== "rgba(0, 0, 0, 0)" &&
-        bgColor !== "transparent"
-      ) {
-        bg = parseColor(bgColor);
+
+      if (bgColor && !isTransparent(bgColor)) {
+        const parsedBg = parseColor(bgColor);
+        if (parsedBg) {
+          bg = parsedBg;
+          break;
+        }
       }
+
       el = el.parentElement;
+      depth++;
     }
-    if (!fg || !bg) {
-      return null; // Can't determine colors
+
+    //
+    if (!bg) {
+      bg = [255, 255, 255];
     }
+
     const l1 = luminance(fg);
     const l2 = luminance(bg);
     const ratio = contrastRatio(l1, l2);
-    // WCAG AA: 4.5:1 for normal text, 3:1 for large text
+
     const fontSize = parseFloat(style.fontSize);
-    const isBold = /bold/i.test(style.fontWeight);
-    const isLarge = fontSize >= 18 || (fontSize >= 14 && isBold);
+    const fontWeight = style.fontWeight;
+    const isBold =
+      fontWeight === "bold" ||
+      fontWeight === "bolder" ||
+      parseInt(fontWeight, 10) >= 700;
+
+    const isLarge = fontSize >= 24 || (fontSize >= 18.66 && isBold);
     const minRatio = isLarge ? 3 : 4.5;
+
     if (ratio < minRatio) {
       return {
         issue: {
           id: "contrast",
-          message: `Text contrast ratio is ${ratio.toFixed(2)}:1, which is below the minimum of ${minRatio}:1`,
+          message: `Text contrast ratio is ${ratio.toFixed(2)}:1, which is below the minimum of ${minRatio}:1 (text: rgb(${fg.join(", ")}), background: rgb(${bg.join(", ")})) on ${element.tagName}`,
           element,
           help: "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html",
         },
       };
     }
+
     return null;
   }
 }
