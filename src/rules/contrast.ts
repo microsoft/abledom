@@ -135,7 +135,7 @@ export class ContrastRule extends ValidationRule {
     while (el && depth < maxDepth) {
       const bgColor = win.getComputedStyle(el).backgroundColor;
 
-      if (bgColor && !isTransparent(bgColor)) {
+      if (!isTransparent(bgColor)) {
         const parsedBg = parseColor(bgColor);
         if (parsedBg) {
           bg = parsedBg;
@@ -147,7 +147,6 @@ export class ContrastRule extends ValidationRule {
       depth++;
     }
 
-    //
     if (!bg) {
       bg = [255, 255, 255];
     }
