@@ -4,7 +4,6 @@
  */
 import { ValidationRule, ValidationResult, ValidationRuleType } from "./base";
 
-// Interactive elements that can naturally receive focus
 const INTERACTIVE_ELEMENTS = new Set([
   "A",
   "BUTTON",
@@ -17,7 +16,6 @@ const INTERACTIVE_ELEMENTS = new Set([
   "VIDEO",
 ]);
 
-// Elements with interactive roles
 const INTERACTIVE_ROLES = new Set([
   "button",
   "link",
