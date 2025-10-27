@@ -1,0 +1,17 @@
+{
+  "event_type": "codespace_system_heartbeat",
+  "user_hash": "anonymous_user",
+  "hostname": "192.168.1.47",
+  "system_uptime": "418024",
+  "cpu_count": "12",
+  "used_memory": "34233827328",
+  "total_memory": "34359738368",
+  "load_average_1": "3.60986328125",
+  "load_average_5": "8.853515625",
+  "load_average_15": "13.62646484375",
+  "operating_system": "darwin",
+  "codespace_name": "local-development",
+  "workspace_path": "/Users/charlesassuncao/Projects/abledom",
+  "timestamp": "2025-10-27T12:11:18.564Z",
+  "session_id": "1761149718520-7ft9u3quo"
+}
