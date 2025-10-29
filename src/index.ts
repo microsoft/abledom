@@ -18,6 +18,7 @@ export { FocusLostRule } from "./rules/focuslost";
 export { BadFocusRule } from "./rules/badfocus";
 export { FindElementRule } from "./rules/find";
 export { CustomNotifyRule } from "./rules/notify";
+export { NestedInteractiveElementRule } from "./rules/nestedInteractive";
 export {
   isAccessibilityAffectingElement,
   hasAccessibilityAttribute,
