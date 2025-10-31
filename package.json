@@ -42,6 +42,7 @@
   "homepage": "https://github.com/microsoft/abledom#readme",
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@types/node": "^24.9.2",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "@xmldom/xmldom": "^0.9.8",
