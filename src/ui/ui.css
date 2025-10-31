@@ -110,7 +110,7 @@
 }
 
 .abledom-issues-container {
-  overflow: scroll;
+  overflow: auto;
   max-height: calc(100vh - 100px);
 }
 
