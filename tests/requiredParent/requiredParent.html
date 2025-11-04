@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Required Parent ( Invalid HTML Structure )</title>
+    <script type="module" src="./requiredParent.ts"></script>
+  </head>
+  <body>
+    <h1>Required Parent ( Invalid HTML Structure )</h1>
+
+    <li>List Item without a parent list</li>
+    <dt>Definition Term without a parent dl</dt>
+    <dd>Definition Description without a parent dl</dd>
+    <option>Option without a parent select</option>
+
+    <!-- Table elements need to be created dynamically via JS because 
+         browsers auto-correct invalid table HTML during parsing -->
+    <div id="table-test-container"></div>
+
+    <script>
+      const container = document.getElementById("table-test-container");
+
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.textContent = "Table Data without a parent table";
+      tr.appendChild(td);
+      container.appendChild(tr);
+
+      const tbody = document.createElement("tbody");
+      const tr2 = document.createElement("tr");
+      const td2 = document.createElement("td");
+      td2.textContent = "Another table data in tbody without table";
+      tr2.appendChild(td2);
+      tbody.appendChild(tr2);
+      container.appendChild(tbody);
+    </script>
+  </body>
+</html>
