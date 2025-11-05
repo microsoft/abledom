@@ -172,34 +172,3 @@
   color: #fff;
   margin: 0;
 }
-
-.abledom-highlight {
-  background-color: yellow;
-  box-sizing: border-box;
-  display: none;
-  opacity: 0.6;
-  position: fixed;
-  z-index: 100499;
-}
-
-.abledom-highlight-border1 {
-  border-top: 2px solid red;
-  border-bottom: 2px solid red;
-  box-sizing: border-box;
-  position: absolute;
-  top: -2px;
-  width: calc(100% + 20px);
-  height: calc(100% + 4px);
-  margin: 0 -10px;
-}
-
-.abledom-highlight-border2 {
-  border-left: 2px solid red;
-  border-right: 2px solid red;
-  box-sizing: border-box;
-  position: absolute;
-  width: calc(100% + 4px);
-  left: -2px;
-  height: calc(100% + 20px);
-  margin: -10px 0;
-}
