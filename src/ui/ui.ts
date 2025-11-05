@@ -14,7 +14,9 @@ import type { AbleDOM } from "../core";
 // The imports below will become functions that use DOMBuilder to build SVG
 // unrolled by both Vite (in `npm run dev`) and TSUP (in `npm run build`).
 // @ts-expect-error parsed assets
-import css from "./ui.css?raw";
+import uiCSS from "./ui.css?raw";
+// @ts-expect-error parsed assets
+import highlighterCSS from "./highlighter.css?raw";
 // @ts-expect-error parsed assets
 import svgClose from "./close.svg?raw";
 // @ts-expect-error parsed assets
@@ -182,8 +184,7 @@ export class IssueUI {
 
           if (element) {
             revealButton.onclick = () => {
-              element.scrollIntoView({ block: "center" });
-              this._issuesUI?.highlight(element);
+              this._issuesUI?.highlight(element, true);
             };
           } else {
             revealButton.style.display = "none";
@@ -301,6 +302,7 @@ export class IssueUI {
 }
 
 export class IssuesUI {
+  private _win: Window | undefined;
   private _container: HTMLElement | undefined;
   private _issuesContainer: HTMLElement | undefined;
   private _menuElement: HTMLElement | undefined;
@@ -315,12 +317,18 @@ export class IssuesUI {
   private _isMuted = false;
   private _issues: Set<IssueUI> = new Set();
 
-  private _highlighter: ElementHighlighter | undefined;
+  private _getHighlighter?: () => ElementHighlighter | undefined;
 
   readonly bugReport: BugReportProperty | undefined;
   readonly headless: boolean;
 
-  constructor(win: Window, props: IssuesUIProps) {
+  constructor(
+    win: Window,
+    getHighlighter: () => ElementHighlighter | undefined,
+    props: IssuesUIProps,
+  ) {
+    this._win = win;
+    this._getHighlighter = getHighlighter;
     this.bugReport = props.bugReport;
     this.headless = !!props.headless;
 
@@ -337,7 +345,7 @@ export class IssuesUI {
 
     const style = doc.createElement("style");
     style.type = "text/css";
-    style.appendChild(doc.createTextNode(css));
+    style.appendChild(doc.createTextNode(uiCSS));
     container.appendChild(style);
 
     const issuesContainer = (this._issuesContainer =
@@ -485,8 +493,6 @@ export class IssuesUI {
       .closeTag();
 
     doc.body.appendChild(container);
-
-    this._highlighter = new ElementHighlighter(win);
   }
 
   private setUIAlignment(alignment: UIAlignments) {
@@ -640,14 +646,18 @@ export class IssuesUI {
     this._setShowHideButtonsVisibility();
   }
 
-  highlight(element: HTMLElement | null) {
-    this._highlighter?.highlight(element);
+  highlight(
+    element: HTMLElement | null,
+    scrollIntoView?: boolean,
+    autoHideTime?: number,
+  ) {
+    this._getHighlighter?.()?.highlight(element, scrollIntoView, autoHideTime);
   }
 
   dispose() {
-    this._highlighter?.dispose();
     this._container?.remove();
-    delete this._highlighter;
+    delete this._win;
+    delete this._getHighlighter;
     delete this._container;
     delete this._issuesContainer;
     delete this._menuElement;
@@ -661,12 +671,13 @@ export class IssuesUI {
   }
 }
 
-class ElementHighlighter {
+export class ElementHighlighter {
   private _window: Window | undefined;
   private _container: HTMLElementWithAbleDOMUIFlag | undefined;
   private _element: HTMLElement | undefined;
   private _cancelScrollTimer: (() => void) | undefined;
   private _intersectionObserver: IntersectionObserver | undefined;
+  private _cancelAutoHideTimer: (() => void) | undefined;
 
   constructor(win: Window) {
     this._window = win;
@@ -675,6 +686,12 @@ class ElementHighlighter {
       win.document.createElement("div"));
     container.__abledomui = true;
     container.className = "abledom-highlight";
+
+    const doc = win.document;
+    const style = doc.createElement("style");
+    style.type = "text/css";
+    style.appendChild(doc.createTextNode(highlighterCSS));
+    container.appendChild(style);
 
     new DOMBuilder(container)
       .openTag("div", { class: "abledom-highlight-border1" })
@@ -685,7 +702,15 @@ class ElementHighlighter {
     win.addEventListener("scroll", this._onScroll, true);
   }
 
-  highlight(element: HTMLElement | null) {
+  highlight(
+    element: HTMLElement | null,
+    scrollIntoView?: boolean,
+    autoHideTime?: number,
+  ) {
+    if (this._cancelAutoHideTimer && element !== this._element) {
+      this._cancelAutoHideTimer();
+    }
+
     if (!element) {
       delete this._element;
       this._unobserve();
@@ -701,6 +726,26 @@ class ElementHighlighter {
     }
 
     this._element = element;
+
+    if (scrollIntoView) {
+      element.scrollIntoView({ block: "center" });
+    }
+
+    if (autoHideTime) {
+      this._cancelAutoHideTimer?.();
+
+      const autoHideTimeout = win.setTimeout(() => {
+        if (this._cancelAutoHideTimer) {
+          this.highlight(null);
+          delete this._cancelAutoHideTimer;
+        }
+      }, autoHideTime);
+
+      this._cancelAutoHideTimer = () => {
+        win.clearTimeout(autoHideTimeout);
+        delete this._cancelAutoHideTimer;
+      };
+    }
 
     this._intersectionObserver = new IntersectionObserver(([entry]) => {
       if (entry) {
@@ -728,6 +773,7 @@ class ElementHighlighter {
   dispose() {
     this._unobserve();
     this._cancelScrollTimer?.();
+    this._cancelAutoHideTimer?.();
     this._window?.removeEventListener("scroll", this._onScroll, true);
     this._container?.remove();
     delete this._element;

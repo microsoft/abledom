@@ -29,7 +29,27 @@ test("Label Rule", async ({ page }) => {
     }
   });
 
-  await awaitIdle(page);
+  expect(await awaitIdle(page)).toEqual([
+    {
+      element: '<button id="button-1"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+    {
+      element: '<button title="" id="button-2"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+    {
+      element:
+        '<button aria-labelledby="button-3-label" id="button-3"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+  ]);
 
   expect(await getIssuesCount(page)).toBe(3);
 
@@ -52,7 +72,7 @@ test("Label Rule", async ({ page }) => {
     }
   });
 
-  await awaitIdle(page);
+  expect(await awaitIdle(page)).toEqual([]);
 
   expect(await getIssuesCount(page)).toBe(0);
 });
