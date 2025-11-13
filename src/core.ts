@@ -8,6 +8,7 @@ import {
   IssuesUI,
   HTMLElementWithAbleDOMUIFlag,
   isAbleDOMUIElement,
+  ElementHighlighter,
 } from "./ui/ui";
 import { isAccessibilityAffectingElement } from "./utils";
 import { ValidationRule, ValidationIssue } from "./rules/base";
@@ -33,16 +34,17 @@ export interface AbleDOMProps {
       issue: ValidationIssue,
     ): void;
     onIssueUpdated?(
-      element: HTMLElement | null,
+      element: HTMLElement,
       rule: ValidationRule,
       issue: ValidationIssue,
     ): void;
-    onIssueRemoved?(element: HTMLElement | null, rule: ValidationRule): void;
+    onIssueRemoved?(element: HTMLElement, rule: ValidationRule): void;
   };
 }
 
 export class AbleDOM {
   private _win: Window;
+  private _isDisposed = false;
   private _props: AbleDOMProps | undefined = undefined;
   private _observer: MutationObserver;
   private _clearValidationTimeout: (() => void) | undefined;
@@ -55,8 +57,14 @@ export class AbleDOM {
   private _startFunc: (() => void) | undefined;
   private _isStarted = false;
   private _issuesUI: IssuesUI | undefined;
-  private _idlePromise: Promise<void> | undefined;
+  private _elementHighlighter: ElementHighlighter | undefined;
+  private _idlePromise: Promise<ValidationIssue[]> | undefined;
   private _idleResolve: (() => void) | undefined;
+  private _currentAnchoredIssues: Map<
+    HTMLElement,
+    Map<ValidationRule, ValidationIssue>
+  > = new Map();
+  private _currentNotAnchoredIssues: ValidationIssue[] = [];
 
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
@@ -234,9 +242,17 @@ export class AbleDOM {
     }
   }
 
+  private _getHighlighter = () => {
+    if (!this._elementHighlighter && !this._isDisposed) {
+      this._elementHighlighter = new ElementHighlighter(this._win);
+    }
+
+    return this._elementHighlighter;
+  };
+
   private _addIssue(rule: ValidationRule, issue: ValidationIssue) {
     if (!this._issuesUI) {
-      this._issuesUI = new IssuesUI(this._win, {
+      this._issuesUI = new IssuesUI(this._win, this._getHighlighter, {
         bugReport: this._props?.bugReport,
         headless: this._props?.headless,
       });
@@ -271,24 +287,20 @@ export class AbleDOM {
         issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
         issues.set(rule, issueUI);
         justUpdate = false;
-        this._props?.callbacks?.onIssueAdded?.(element, rule, issue);
+        this._onIssueAdded(element, rule, issue);
       }
 
       this._elementsWithIssues.add(element);
     } else {
       issueUI = new IssueUI(this._win, this, rule, this._issuesUI);
       justUpdate = false;
-      this._props?.callbacks?.onIssueAdded?.(null, rule, issue);
+      this._onIssueAdded(null, rule, issue);
     }
 
     issueUI.update(issue);
 
-    if (justUpdate) {
-      this._props?.callbacks?.onIssueUpdated?.(
-        rule.anchored && element ? element : null,
-        rule,
-        issue,
-      );
+    if (justUpdate && rule.anchored && element) {
+      this._onIssueUpdated(element, rule, issue);
     }
   }
 
@@ -308,7 +320,7 @@ export class AbleDOM {
     if (issue) {
       issue.dispose();
       issues.delete(rule);
-      this._props?.callbacks?.onIssueRemoved?.(element, rule);
+      this._onIssueRemoved(element, rule);
     }
 
     if (issues.size === 0) {
@@ -423,6 +435,61 @@ export class AbleDOM {
     }
   }
 
+  private _updateCurrentAnchoredIssues(
+    element: HTMLElement,
+    rule: ValidationRule,
+    issue: ValidationIssue | null,
+  ): void {
+    let issuesByElement = this._currentAnchoredIssues.get(element);
+
+    if (!issuesByElement && issue) {
+      issuesByElement = new Map();
+      this._currentAnchoredIssues.set(element, issuesByElement);
+    }
+
+    if (issuesByElement) {
+      if (issue) {
+        issuesByElement.set(rule, issue);
+      } else {
+        issuesByElement.delete(rule);
+
+        if (issuesByElement.size === 0) {
+          this._currentAnchoredIssues.delete(element);
+        }
+      }
+    }
+  }
+
+  private _onIssueAdded(
+    element: HTMLElement | null,
+    rule: ValidationRule,
+    issue: ValidationIssue,
+  ): void {
+    if (element) {
+      this._updateCurrentAnchoredIssues(element, rule, issue);
+    } else {
+      this._currentNotAnchoredIssues.push(issue);
+    }
+
+    this._props?.callbacks?.onIssueAdded?.(element, rule, issue);
+  }
+
+  private _onIssueUpdated(
+    element: HTMLElement,
+    rule: ValidationRule,
+    issue: ValidationIssue,
+  ): void {
+    this._updateCurrentAnchoredIssues(element, rule, issue);
+
+    this._props?.callbacks?.onIssueUpdated?.(element, rule, issue);
+  }
+
+  private _onIssueRemoved(element: HTMLElement, rule: ValidationRule): void {
+    this._updateCurrentAnchoredIssues(element, rule, null);
+
+    this._props?.callbacks?.onIssueRemoved?.(element, rule);
+  }
+
   private _remove(elements: Set<HTMLElementWithAbleDOM>) {
     elements.forEach((element) => {
       const rules = [...(element.__abledom?.issues?.keys() || [])];
@@ -469,9 +536,21 @@ export class AbleDOM {
     this._addIssue(rule, issue);
   };
 
-  idle(): Promise<void> {
+  private _getCurrentIssues(): ValidationIssue[] {
+    const issues = this._currentNotAnchoredIssues.slice(0);
+
+    this._currentAnchoredIssues.forEach((issueByRule) => {
+      issueByRule.forEach((issue) => {
+        issues.push(issue);
+      });
+    });
+
+    return issues;
+  }
+
+  idle(): Promise<ValidationIssue[]> {
     if (!this._clearValidationTimeout) {
-      return Promise.resolve();
+      return Promise.resolve(this._getCurrentIssues());
     }
 
     if (!this._idlePromise) {
@@ -479,12 +558,30 @@ export class AbleDOM {
         this._idleResolve = () => {
           delete this._idlePromise;
           delete this._idleResolve;
-          resolve();
+          resolve(this._getCurrentIssues());
         };
       });
     }
 
     return this._idlePromise;
+  }
+
+  clearCurrentIssues(anchored = true, notAnchored = true): void {
+    if (anchored) {
+      this._currentAnchoredIssues.clear();
+    }
+
+    if (notAnchored) {
+      this._currentNotAnchoredIssues = [];
+    }
+  }
+
+  highlightElement(
+    element: HTMLElement | null,
+    scrollIntoView?: boolean,
+    autoHideTime?: number,
+  ): void {
+    this._getHighlighter()?.highlight(element, scrollIntoView, autoHideTime);
   }
 
   log: typeof console.error = (...args) => {
@@ -525,6 +622,8 @@ export class AbleDOM {
   }
 
   dispose() {
+    this._isDisposed = true;
+
     const doc = this._win.document;
 
     doc.addEventListener("focusin", this._onFocusIn, true);
@@ -536,6 +635,8 @@ export class AbleDOM {
     this._dependantIdsByElement.clear();
     this._elementsDependingOnId.clear();
     this._idByElement.clear();
+
+    this.clearCurrentIssues();
 
     this._issuesUI?.dispose();
     delete this._issuesUI;

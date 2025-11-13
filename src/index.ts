@@ -20,6 +20,8 @@ export { BadFocusRule } from "./rules/badfocus";
 export { FindElementRule } from "./rules/find";
 export { CustomNotifyRule } from "./rules/notify";
 export { RequiredParentRule } from "./rules/requiredparent";
+export { NestedInteractiveElementRule } from "./rules/nestedInteractive";
+export { TabIndexRule } from "./rules/tabindex";
 export {
   isAccessibilityAffectingElement,
   hasAccessibilityAttribute,

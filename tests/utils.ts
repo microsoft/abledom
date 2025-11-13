@@ -13,11 +13,16 @@ import { Page } from "@playwright/test";
 export const issueSelector = "#abledom-report .abledom-issue";
 
 interface WindowWithAbleDOMData extends Window {
-  __ableDOMIdle?: () => Promise<void>;
+  __ableDOMIdle?: () => Promise<ValidationIssue[]>;
   __ableDOMIssuesFromCallbacks?: Map<
     HTMLElement | null,
     Map<ValidationRule<ValidationIssue>, ValidationIssue>
   >;
+}
+
+export interface ValidationIssueForTestsIdle
+  extends Omit<ValidationIssue, "element"> {
+  element?: string;
 }
 
 export function getAbleDOMCallbacks(): AbleDOMProps["callbacks"] {
@@ -81,10 +86,19 @@ export async function loadTestPage(page: Page, uri: string): Promise<void> {
   });
 }
 
-export async function awaitIdle(page: Page): Promise<void> {
-  return await page.evaluate(async () => {
-    await (window as WindowWithAbleDOMData).__ableDOMIdle?.();
-  });
+export async function awaitIdle(
+  page: Page,
+): Promise<ValidationIssueForTestsIdle[]> {
+  return (
+    (await page.evaluate(async () => {
+      return (await (window as WindowWithAbleDOMData).__ableDOMIdle?.())?.map(
+        (issue) => ({
+          ...issue,
+          element: issue.element?.outerHTML,
+        }),
+      );
+    })) || []
+  );
 }
 
 export async function getIssuesCount(page: Page): Promise<number> {

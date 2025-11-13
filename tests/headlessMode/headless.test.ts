@@ -28,7 +28,20 @@ test("Headless Mode", async ({ page }) => {
     }
   });
 
-  await awaitIdle(page);
+  expect(await awaitIdle(page)).toEqual([
+    {
+      element: '<button id="button-1"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+    {
+      element: '<button title="" id="button-2"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+  ]);
 
   expect(await getIssuesCount(page)).toBe(0);
   expect((await getIssuesFromCallbacks(page)).length).toBe(2);
@@ -40,7 +53,14 @@ test("Headless Mode", async ({ page }) => {
     }
   });
 
-  await awaitIdle(page);
+  expect(await awaitIdle(page)).toEqual([
+    {
+      element: '<button title="" id="button-2"></button>',
+      help: "https://www.w3.org/WAI/tutorials/forms/labels/",
+      id: "focusable-element-label",
+      message: "Focusable element must have a non-empty text label.",
+    },
+  ]);
 
   expect(await getIssuesCount(page)).toBe(0);
   expect((await getIssuesFromCallbacks(page)).length).toBe(1);
@@ -52,7 +72,7 @@ test("Headless Mode", async ({ page }) => {
     }
   });
 
-  await awaitIdle(page);
+  expect(await awaitIdle(page)).toEqual([]);
 
   expect(await getIssuesCount(page)).toBe(0);
   expect((await getIssuesFromCallbacks(page)).length).toBe(0);
