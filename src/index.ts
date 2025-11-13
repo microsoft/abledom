@@ -13,12 +13,14 @@ export type {
 } from "./rules/base";
 export { AtomicRule } from "./rules/atomic";
 export { FocusableElementLabelRule } from "./rules/label";
+export { ContrastRule } from "./rules/contrast";
 export { ExistingIdRule } from "./rules/existingid";
 export { FocusLostRule } from "./rules/focuslost";
 export { BadFocusRule } from "./rules/badfocus";
 export { FindElementRule } from "./rules/find";
 export { CustomNotifyRule } from "./rules/notify";
 export { NestedInteractiveElementRule } from "./rules/nestedInteractive";
+export { TabIndexRule } from "./rules/tabindex";
 export {
   isAccessibilityAffectingElement,
   hasAccessibilityAttribute,
