@@ -58,19 +58,6 @@ contrastExceptions.forEach((exception) => contrastRule.addException(exception));
 this._ableDOM.addRule(contrastRule);
 ```
 
-### Usage in E2E
-
-```typescript
-import { scanOnce } from "abledom";
-
-test("page should not have accessibility issues", async () => {
-  await page.goto("http://localhost:3000");
-
-  const issues = await scanOnce(page);
-  expect(issues.length).toBe(0);
-});
-```
-
 ## Rules
 
 ### AtomicRule
