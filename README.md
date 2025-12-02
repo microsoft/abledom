@@ -21,9 +21,7 @@ pnpm add abledom
 ```typescript
 import { AbleDOM } from "abledom";
 
-const consoleError = win.console?.orig?.error || win.console?.error;
-
-const _ableDOM = new AbleDOM(window, { log: consoleError });
+const _ableDOM = new AbleDOM(window, { log: window.console?.error });
 
 // ...Create and add rules and exceptions
 ```
