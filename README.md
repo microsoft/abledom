@@ -1,8 +1,98 @@
 # AbleDOM
 
-Continuous detection of typical web application accessibility problems.
+A continuous accessibility (a11y) monitor for modern web applications.
+
+AbleDOM is a lightweight JavaScript/TypeScript library that observes your DOM in real-time and detects common accessibility issues as they appear.
 
 _Here be dragons_.
+
+## Installation
+
+```bash
+npm install abledom
+# or
+yarn add abledom
+# or
+pnpm add abledom
+```
+
+## Quick start
+
+```typescript
+import { AbleDOM } from "abledom";
+
+const _ableDOM = new AbleDOM(window, { log: window.console?.error });
+
+// ...Create and add rules and exceptions
+```
+
+### Using rules
+
+```typescript
+import { AbleDOM, ContrastRule } from "abledom";
+
+const contrastRule = new ContrastRule();
+this._ableDOM.addRule(contrastRule);
+```
+
+### Adding valid exceptions
+
+```typescript
+import { AbleDOM, ContrastRule } from "abledom";
+
+const contrastExceptions: ((element: HTMLElement) => boolean)[] = [
+  (element: HTMLElement) => {
+    return element.style?.display === "none";
+  },
+  (element: HTMLElement) => {
+    return element.datalist?.ignore === "true";
+  },
+];
+
+const contrastRule = new ContrastRule();
+
+contrastExceptions.forEach((exception) => contrastRule.addException(exception));
+
+this._ableDOM.addRule(contrastRule);
+```
+
+## Rules
+
+### AtomicRule
+
+Detects focusable elements nested inside other atomic focusable elements (like buttons, links, or inputs). Prevents confusing interactive hierarchies that can break keyboard navigation and assistive technology functionality.
+
+### BadFocusRule
+
+Monitors focus changes to detect when focus is stolen by invisible elements. Helps identify scenarios where focus moves to elements that users cannot see, creating a poor accessibility experience.
+
+### ContrastRule
+
+Validates color contrast ratios between text and background colors according to WCAG standards. Ensures text meets minimum contrast requirements (4.5:1 for normal text, 3:1 for large text) for readability.
+
+### ExistingIdRule
+
+Verifies that elements referenced by `aria-labelledby`, `aria-describedby`, or `<label for>` attributes actually exist in the DOM. Prevents broken accessibility relationships.
+
+### FocusableElementLabelRule
+
+Ensures all focusable interactive elements have accessible labels. Checks for labels through various methods including `<label>` elements, ARIA attributes, alt text, and visible text content.
+
+### FocusLostRule
+
+Detects when keyboard focus is lost without being moved to another valid element. Monitors focus/blur events to catch scenarios where users might lose their place while navigating with keyboard.
+
+### NestedInteractiveElementRule
+
+Identifies interactive elements nested within other interactive elements (e.g., a button inside a link). This pattern can confuse users and assistive technologies about which element to interact with.
+
+### RequiredParentRule
+
+Validates that elements requiring specific parent elements are properly nested. Enforces correct HTML structure for elements like `<li>` (must be in `<ul>` or `<ol>`), table elements, and ARIA roles that have parent requirements.
+
+### TabIndexRule
+
+Warns about problematic uses of the `tabindex` attribute, including positive values that break natural tab order and `tabindex` on non-interactive elements. Promotes accessible keyboard navigation patterns.
 
 ## Contributing
 
