@@ -58,6 +58,9 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Install root dependencies
+        run: npm install
+
       - name: Install dependencies
         working-directory: tools/playwright
         run: npm install
