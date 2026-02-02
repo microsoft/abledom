@@ -20,8 +20,10 @@ interface WindowWithAbleDOMData extends Window {
   >;
 }
 
-export interface ValidationIssueForTestsIdle
-  extends Omit<ValidationIssue, "element"> {
+export interface ValidationIssueForTestsIdle extends Omit<
+  ValidationIssue,
+  "element"
+> {
   element?: string;
 }
 
