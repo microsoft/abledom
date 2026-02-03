@@ -175,9 +175,9 @@ test.describe("Testing Mode Flag", () => {
       const instance = (window as WindowWithAbleDOMInstance)
         .ableDOMInstanceForTesting;
       const result = await instance?.idle();
-      return result?.map((issue: { id?: string; message?: string }) => ({
-        id: issue.id,
-        message: issue.message,
+      return result?.map((issue) => ({
+        id: (issue as { id?: string }).id,
+        message: (issue as { message?: string }).message,
       }));
     });
 
