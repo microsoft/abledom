@@ -289,7 +289,7 @@ baseTest("should work without testInfo parameter", async ({ page }) => {
   });
 
   // Call without testInfo - should not report anything but should not error
-  attachAbleDOMMethodsToPage(page);
+  await attachAbleDOMMethodsToPage(page);
 
   // Should complete without errors
   await page.locator("button").waitFor();

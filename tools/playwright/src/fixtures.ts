@@ -22,17 +22,19 @@ export interface AbleDOMFixtures {
   /**
    * Attaches AbleDOM accessibility checking to a page.
    * Call this after creating a page to enable automatic a11y checks on locator actions.
+   * IMPORTANT: This function is async and MUST be awaited before navigating the page.
    *
    * @param page - The Playwright Page object to attach AbleDOM to
    *
    * @example
    * ```typescript
    * const page = await context.newPage();
-   * attachAbleDOM(page);
+   * await attachAbleDOM(page);  // Must await before navigation!
+   * await page.goto('https://example.com');
    * // Now all locator actions on this page will trigger AbleDOM checks
    * ```
    */
-  attachAbleDOM: (page: Page) => void;
+  attachAbleDOM: (page: Page) => Promise<void>;
 }
 
 /**
@@ -87,9 +89,9 @@ export function createAbleDOMTest(): TestType<
 > {
   return base.extend<AbleDOMFixtures>({
     attachAbleDOM: async ({}, use, testInfo) => {
-      const attach = (page: Page): void => {
+      const attach = async (page: Page): Promise<void> => {
         try {
-          attachAbleDOMMethodsToPage(page, testInfo);
+          await attachAbleDOMMethodsToPage(page, testInfo);
           console.log("[AbleDOM] Attached to page.");
         } catch (error) {
           console.warn(`[AbleDOM] Failed to attach to page: ${error}`);
@@ -135,7 +137,7 @@ export function createAbleDOMPageFixture() {
     use: (page: Page) => Promise<void>,
     testInfo: TestInfo,
   ): Promise<void> => {
-    attachAbleDOMMethodsToPage(page, testInfo);
+    await attachAbleDOMMethodsToPage(page, testInfo);
     await use(page);
   };
 }

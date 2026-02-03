@@ -94,19 +94,27 @@ function getCallerLocation(
  * });
  * ```
  */
-export function attachAbleDOMMethodsToPage(
+export async function attachAbleDOMMethodsToPage(
   page: Page,
   testInfo?: TestInfo,
-): void {
+): Promise<void> {
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
 
   // Store testInfo on the page object so each page has its own testInfo
   (page as unknown as Record<string, unknown>).__abledomTestInfo = testInfo;
 
-  // Set the flag immediately on the current page context (in case the app is already loaded)
-  // Errors are caught silently since navigation may destroy the context - addInitScript handles that case
-  page
+  // Add an init script to set the flag before any page scripts run on navigations
+  // This MUST be awaited to ensure it's registered before any navigation happens
+  await page.addInitScript(() => {
+    (
+      window as { ableDOMInstanceForTestingNeeded?: boolean }
+    ).ableDOMInstanceForTestingNeeded = true;
+  });
+
+  // Also set the flag immediately on the current page context (in case the app is already loaded)
+  // Errors are caught silently since the page may be on about:blank or context may be invalid
+  await page
     .evaluate(() => {
       (
         window as unknown as IWindowWithAbleDOMInstance
@@ -115,13 +123,6 @@ export function attachAbleDOMMethodsToPage(
     .catch(() => {
       /* ignore - addInitScript will set flag after navigation */
     });
-
-  // Also add an init script to set the flag before any page scripts run on future navigations
-  void page.addInitScript(() => {
-    (
-      window as { ableDOMInstanceForTestingNeeded?: boolean }
-    ).ableDOMInstanceForTestingNeeded = true;
-  });
 
   let locatorProto: ILocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;

@@ -19,10 +19,7 @@ test.describe("createAbleDOMTest fixture", () => {
     await page.goto("data:text/html,<html><body>Test</body></html>");
 
     // Should not throw when attaching
-    attachAbleDOM(page);
-
-    // Give time for async operations to settle
-    await page.waitForTimeout(100);
+    await attachAbleDOM(page);
 
     await context.close();
   });
@@ -40,7 +37,7 @@ test.describe("createAbleDOMTest fixture", () => {
     );
 
     // Now attach AbleDOM to the page
-    attachAbleDOM(page);
+    await attachAbleDOM(page);
 
     // Set up mock
     await page.evaluate(() => {
@@ -73,8 +70,8 @@ test.describe("createAbleDOMTest fixture", () => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    // Attach AbleDOM to the page
-    attachAbleDOM(page);
+    // Attach AbleDOM to the page (must await before navigation!)
+    await attachAbleDOM(page);
 
     // Navigate to a page
     await page.goto(
@@ -125,11 +122,11 @@ test.describe("createAbleDOMTest fixture", () => {
 
     // Create and attach to first page
     const page1 = await context.newPage();
-    attachAbleDOM(page1);
+    await attachAbleDOM(page1);
 
     // Create and attach to second page
     const page2 = await context.newPage();
-    attachAbleDOM(page2);
+    await attachAbleDOM(page2);
 
     // Navigate both pages
     await page1.goto(
@@ -183,7 +180,7 @@ test.describe("createAbleDOMTest fixture", () => {
     );
 
     // Attach AbleDOM - this will set flag immediately and add init script for future navigations
-    attachAbleDOM(page);
+    await attachAbleDOM(page);
 
     await page.evaluate(() => {
       const win = window as WindowWithAbleDOM;
