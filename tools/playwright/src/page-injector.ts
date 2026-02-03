@@ -104,6 +104,25 @@ export function attachAbleDOMMethodsToPage(
   // Store testInfo on the page object so each page has its own testInfo
   (page as unknown as Record<string, unknown>).__abledomTestInfo = testInfo;
 
+  // Set the flag immediately on the current page context (in case the app is already loaded)
+  // Errors are caught silently since navigation may destroy the context - addInitScript handles that case
+  page
+    .evaluate(() => {
+      (
+        window as unknown as IWindowWithAbleDOMInstance
+      ).ableDOMInstanceForTestingNeeded = true;
+    })
+    .catch(() => {
+      /* ignore - addInitScript will set flag after navigation */
+    });
+
+  // Also add an init script to set the flag before any page scripts run on future navigations
+  void page.addInitScript(() => {
+    (
+      window as { ableDOMInstanceForTestingNeeded?: boolean }
+    ).ableDOMInstanceForTestingNeeded = true;
+  });
+
   let locatorProto: ILocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;
 
@@ -134,9 +153,6 @@ export function attachAbleDOMMethodsToPage(
 
       const issues = await currentPage.evaluate(async () => {
         const win = window as unknown as IWindowWithAbleDOMInstance;
-        // Set the flag on every page to signal AbleDOM to expose its testing instance.
-        // This ensures the flag is set even when using fixtures before navigation.
-        win.ableDOMInstanceForTestingNeeded = true;
         const issues = await win.ableDOMInstanceForTesting?.idle();
         const el = issues?.[0]?.element;
 

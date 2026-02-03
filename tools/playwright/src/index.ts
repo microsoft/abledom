@@ -13,6 +13,11 @@ export {
   type AbleDOMReporterOptions,
   type ReportEntry,
 } from "./reporter.js";
+export {
+  createAbleDOMTest,
+  createAbleDOMPageFixture,
+  type AbleDOMFixtures,
+} from "./fixtures.js";
 
 /**
  * Options for the AbleDOM Playwright setup.
@@ -99,45 +104,5 @@ export function setupAbleDOM(
   return {
     reporter: [AbleDOMReporter, reporterOptions],
     attachToPage: attachAbleDOMMethodsToPage,
-  };
-}
-
-/**
- * Creates an AbleDOM test fixture for use with Playwright's test.extend().
- *
- * This provides an alternative way to integrate AbleDOM that automatically
- * attaches to pages without manual setup in each test.
- *
- * @param options - Configuration options
- * @returns A fixture definition that can be used with test.extend()
- *
- * @example
- * ```typescript
- * // fixtures.ts
- * import { test as base } from '@playwright/test';
- * import { createAbleDOMFixture } from 'abledom-playwright';
- *
- * export const test = base.extend({
- *   page: createAbleDOMFixture(),
- * });
- *
- * // my-test.spec.ts
- * import { test } from './fixtures';
- *
- * test('accessibility test', async ({ page }) => {
- *   await page.goto('https://example.com');
- *   // AbleDOM is automatically attached
- *   await page.locator('button').click();
- * });
- * ```
- */
-export function createAbleDOMFixture() {
-  return async (
-    { page }: { page: Page },
-    use: (page: Page) => Promise<void>,
-    testInfo: TestInfo,
-  ): Promise<void> => {
-    attachAbleDOMMethodsToPage(page, testInfo);
-    await use(page);
   };
 }
