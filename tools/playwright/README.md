@@ -19,7 +19,7 @@ import { defineConfig } from "@playwright/test";
 import { setupAbleDOM } from "abledom-playwright";
 
 const abledom = setupAbleDOM({
-  reportFile: "accessibility-report.txt",
+  reportFile: "accessibility-report.json",
 });
 
 export default defineConfig({
@@ -77,7 +77,7 @@ Creates an AbleDOM configuration for Playwright.
 
 **Options:**
 
-- `reportFile?: string` - Output file path for the accessibility report (default: `'abledom-report.txt'`)
+- `reportFile?: string` - Output file path for the accessibility report (default: `'abledom-report.json'`)
 
 **Returns:**
 
@@ -105,7 +105,7 @@ The custom Playwright reporter class. Can be used directly in config:
 import { AbleDOMReporter } from "abledom-playwright/reporter";
 
 export default defineConfig({
-  reporter: [["list"], [AbleDOMReporter, { outputFile: "report.txt" }]],
+  reporter: [["list"], [AbleDOMReporter, { outputFile: "report.json" }]],
 });
 ```
 
@@ -137,25 +137,36 @@ The following Playwright actions trigger accessibility checks:
 
 ## Report Format
 
-```
-AbleDOM Accessibility Report
-================================================================================
-Generated: 2024-01-15T10:30:00.000Z
-Total Issues: 2
-================================================================================
+The report is output as JSON:
 
-Issue 1:
-  Test: my accessibility test
-  Test Location: tests/example.spec.ts:10:5
-  Called From: tests/example.spec.ts:15:23
-  Time: 2024-01-15T10:30:01.000Z
-  Data:
+```json
+{
+  "date": "2024-01-15T10:30:00.000Z",
+  "records": [
     {
+      "testTitle": "my accessibility test",
+      "testFile": "tests/example.spec.ts",
+      "testLine": 10,
+      "testColumn": 5,
+      "timestamp": "2024-01-15T10:30:01.000Z",
+      "data": {
         "type": "AbleDOM Issue",
+        "callerFile": "tests/example.spec.ts",
+        "callerLine": 15,
+        "callerColumn": 23,
         "issueCount": 1,
-        "issues": [...]
+        "issues": [
+          {
+            "id": "focusable-element-label",
+            "message": "Focusable element must have a non-empty text label.",
+            "element": "<button></button>"
+          }
+        ],
+        "fullMessage": "AbleDOM found issue: ..."
+      }
     }
---------------------------------------------------------------------------------
+  ]
+}
 ```
 
 ## License
