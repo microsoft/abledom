@@ -6,12 +6,12 @@
 import type { Page, Locator, TestInfo } from "@playwright/test";
 import type { AbleDOMTestingMode, WindowWithAbleDOMInstance } from "./types.js";
 
-interface ILocatorMonkeyPatchedWithAbleDOM extends Locator {
+interface LocatorMonkeyPatchedWithAbleDOM extends Locator {
   __locatorIsMonkeyPatchedWithAbleDOM?: boolean;
 }
 
 type FunctionWithCachedLocatorProto = ((page: Page) => void) & {
-  __cachedLocatorProto?: ILocatorMonkeyPatchedWithAbleDOM;
+  __cachedLocatorProto?: LocatorMonkeyPatchedWithAbleDOM;
 };
 
 /**
@@ -117,7 +117,7 @@ export async function attachAbleDOMMethodsToPage(
       /* ignore - addInitScript will set flag after navigation */
     });
 
-  let locatorProto: ILocatorMonkeyPatchedWithAbleDOM | undefined =
+  let locatorProto: LocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;
 
   if (!locatorProto) {
