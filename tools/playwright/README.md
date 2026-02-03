@@ -1,6 +1,6 @@
 # abledom-playwright
 
-Playwright integration for AbleDOM accessibility testing. This package provides a custom reporter and page injection utilities that automatically check for accessibility issues during Playwright tests.
+Playwright integration for AbleDOM accessibility testing. This package provides fixtures and a custom reporter that automatically check for accessibility issues during Playwright tests.
 
 ## Installation
 
@@ -16,39 +16,21 @@ In your `playwright.config.ts`:
 
 ```typescript
 import { defineConfig } from "@playwright/test";
-import { setupAbleDOM } from "abledom-playwright";
-
-const abledom = setupAbleDOM({
-  reportFile: "accessibility-report.json",
-});
+import { AbleDOMReporter } from "abledom-playwright";
 
 export default defineConfig({
-  reporter: [["list"], abledom.reporter],
-});
-
-// Export for use in tests
-export { abledom };
-```
-
-### 2. Attach to Pages in Tests
-
-```typescript
-import { test } from "@playwright/test";
-import { abledom } from "./playwright.config";
-
-test("my accessibility test", async ({ page }, testInfo) => {
-  await page.goto("https://example.com");
-  abledom.attachToPage(page, testInfo);
-
-  // All subsequent locator actions will trigger accessibility checks
-  await page.locator("button").click();
-  await page.locator("input").fill("text");
+  reporter: [
+    ["list"],
+    [AbleDOMReporter, { outputFile: "accessibility-report.json" }],
+  ],
 });
 ```
 
-## Alternative: Using Fixtures
+### 2. Use the Fixture
 
-For automatic attachment without manual setup in each test:
+#### Option A: Automatic Page Attachment (Recommended)
+
+For automatic attachment to the built-in `page` fixture:
 
 ```typescript
 // fixtures.ts
@@ -69,22 +51,40 @@ test("accessibility test", async ({ page }) => {
 });
 ```
 
+#### Option B: Manual Attachment with `attachAbleDOM`
+
+For tests that create pages manually (e.g., via `context.newPage()`):
+
+```typescript
+// fixtures.ts
+import { test as base, mergeTests } from "@playwright/test";
+import { createAbleDOMTest } from "abledom-playwright";
+
+export const test = mergeTests(base, createAbleDOMTest());
+
+// my-test.spec.ts
+import { test } from "./fixtures";
+
+test("accessibility test", async ({ attachAbleDOM, browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await attachAbleDOM(page); // Must await before navigation!
+  await page.goto("https://example.com");
+  await page.locator("button").click();
+});
+```
+
 ## API Reference
 
-### `setupAbleDOM(options?)`
+### `createAbleDOMPageFixture()`
 
-Creates an AbleDOM configuration for Playwright.
+Creates a Playwright fixture that automatically attaches AbleDOM to the built-in `page` fixture.
 
-**Options:**
+### `createAbleDOMTest()`
 
-- `reportFile?: string` - Output file path for the accessibility report (default: `'abledom-report.json'`)
+Creates a test fixture that provides an `attachAbleDOM` function for manual attachment. Use with `mergeTests()` to combine with other fixtures.
 
-**Returns:**
-
-- `reporter` - Reporter configuration tuple for `playwright.config.ts`
-- `attachToPage(page, testInfo?)` - Function to attach AbleDOM to a page
-
-### `attachAbleDOMMethodsToPage(page, testInfo?)`
+### `attachAbleDOMMethodsToPage(page, testInfo?, mode?)`
 
 Directly attaches AbleDOM accessibility checking to a Playwright page.
 
@@ -92,17 +92,16 @@ Directly attaches AbleDOM accessibility checking to a Playwright page.
 
 - `page: Page` - The Playwright Page object
 - `testInfo?: TestInfo` - Optional TestInfo for reporting
+- `mode?: AbleDOMTestingMode` - Testing mode (1=headed, 2=headless, 3=exact). Defaults to 2.
 
-### `createAbleDOMPageFixture()`
-
-Creates a Playwright fixture that automatically attaches AbleDOM to pages.
+**Important:** This is an async function and MUST be awaited before navigating the page.
 
 ### `AbleDOMReporter`
 
-The custom Playwright reporter class. Can be used directly in config:
+The custom Playwright reporter class:
 
 ```typescript
-import { AbleDOMReporter } from "abledom-playwright/reporter";
+import { AbleDOMReporter } from "abledom-playwright";
 
 export default defineConfig({
   reporter: [["list"], [AbleDOMReporter, { outputFile: "report.json" }]],
@@ -134,40 +133,6 @@ The following Playwright actions trigger accessibility checks:
 - `focus`, `blur`
 - `clear`
 - `setInputFiles`
-
-## Report Format
-
-The report is output as JSON:
-
-```json
-{
-  "date": "2024-01-15T10:30:00.000Z",
-  "records": [
-    {
-      "testTitle": "my accessibility test",
-      "testFile": "tests/example.spec.ts",
-      "testLine": 10,
-      "testColumn": 5,
-      "timestamp": "2024-01-15T10:30:01.000Z",
-      "data": {
-        "type": "AbleDOM Issue",
-        "callerFile": "tests/example.spec.ts",
-        "callerLine": 15,
-        "callerColumn": 23,
-        "issueCount": 1,
-        "issues": [
-          {
-            "id": "focusable-element-label",
-            "message": "Focusable element must have a non-empty text label.",
-            "element": "<button></button>"
-          }
-        ],
-        "fullMessage": "AbleDOM found issue: ..."
-      }
-    }
-  ]
-}
-```
 
 ## License
 
