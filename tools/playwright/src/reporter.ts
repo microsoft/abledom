@@ -53,6 +53,8 @@ export interface AbleDOMReporterOptions {
 export class AbleDOMReporter implements Reporter {
   private collectedData: ReportEntry[] = [];
   private outputPath: string;
+  private goodAssertionCount = 0;
+  private badAssertionCount = 0;
 
   constructor(options: AbleDOMReporterOptions = {}) {
     this.outputPath = options.outputFile || "abledom-report.json";
@@ -61,6 +63,8 @@ export class AbleDOMReporter implements Reporter {
   onBegin(): void {
     // Clear any existing data when test run begins
     this.collectedData = [];
+    this.goodAssertionCount = 0;
+    this.badAssertionCount = 0;
   }
 
   /**
@@ -87,7 +91,20 @@ export class AbleDOMReporter implements Reporter {
   onTestEnd(test: TestCase, result: TestResult): void {
     // Collect data from test attachments
     result.attachments.forEach((attachment) => {
-      if (attachment.name === "abledom-test-data" && attachment.body) {
+      if (attachment.name === "abledom-assertion" && attachment.body) {
+        try {
+          const data = JSON.parse(attachment.body.toString()) as {
+            type: "good" | "bad";
+          };
+          if (data.type === "good") {
+            this.goodAssertionCount++;
+          } else if (data.type === "bad") {
+            this.badAssertionCount++;
+          }
+        } catch {
+          // Ignore malformed assertion data
+        }
+      } else if (attachment.name === "abledom-test-data" && attachment.body) {
         try {
           const data = JSON.parse(attachment.body.toString());
           this.addData(
@@ -118,6 +135,8 @@ export class AbleDOMReporter implements Reporter {
 
     const report = {
       date: new Date().toISOString(),
+      goodAssertionCount: this.goodAssertionCount,
+      badAssertionCount: this.badAssertionCount,
       records: this.collectedData,
     };
 

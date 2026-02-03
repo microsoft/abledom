@@ -145,8 +145,9 @@ export async function attachAbleDOMMethodsToPage(
       const ret = await origWaitFor.apply(this, args);
       const currentPage = this.page();
 
-      const issues = await currentPage.evaluate(async () => {
+      const result = await currentPage.evaluate(async () => {
         const win = window as unknown as WindowWithAbleDOMInstance;
+        const hasInstance = !!win.ableDOMInstanceForTesting;
         const issues = await win.ableDOMInstanceForTesting?.idle();
         const el = issues?.[0]?.element;
 
@@ -155,13 +156,33 @@ export async function attachAbleDOMMethodsToPage(
           // win.ableDOMInstanceForTesting?.highlightElement(el, true);
         }
 
-        return issues?.map((issue) => ({
-          id: issue.id,
-          message: issue.message,
-          element: issue.element?.outerHTML,
-          parentParent: issue.element?.parentElement?.parentElement?.outerHTML,
-        }));
+        return {
+          hasInstance,
+          issues: issues?.map((issue) => ({
+            id: issue.id,
+            message: issue.message,
+            element: issue.element?.outerHTML,
+            parentParent:
+              issue.element?.parentElement?.parentElement?.outerHTML,
+          })),
+        };
       });
+
+      const { hasInstance, issues } = result;
+
+      // Get testInfo from the page object (stored by attachAbleDOMMethodsToPage)
+      const pageTestInfo = (currentPage as unknown as Record<string, unknown>)
+        .__abledomTestInfo as TestInfo | undefined;
+
+      // Report assertion count to the reporter
+      if (pageTestInfo) {
+        await pageTestInfo.attach("abledom-assertion", {
+          body: JSON.stringify({
+            type: hasInstance ? "good" : "bad",
+          }),
+          contentType: "application/json",
+        });
+      }
 
       if (issues && issues.length) {
         const issuesText = issues.map(
@@ -178,10 +199,6 @@ export async function attachAbleDOMMethodsToPage(
         // Capture stack trace to find the actual caller location
         const error = new Error();
         const callerLocation = getCallerLocation(error.stack);
-
-        // Get testInfo from the page object (stored by attachAbleDOMMethodsToPage)
-        const pageTestInfo = (currentPage as unknown as Record<string, unknown>)
-          .__abledomTestInfo as TestInfo | undefined;
 
         // Report to custom reporter if testInfo is available
         if (pageTestInfo && callerLocation) {

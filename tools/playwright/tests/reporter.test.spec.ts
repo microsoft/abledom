@@ -97,6 +97,8 @@ baseTest.describe("AbleDOMReporter", () => {
 
     // Verify structure
     expect(report.date).toBeDefined();
+    expect(report.goodAssertionCount).toBe(0);
+    expect(report.badAssertionCount).toBe(0);
     expect(report.records).toBeInstanceOf(Array);
     expect(report.records.length).toBe(1);
 
@@ -207,8 +209,90 @@ baseTest.describe("AbleDOMReporter", () => {
     const report = JSON.parse(content);
 
     expect(report.date).toBeDefined();
+    expect(report.goodAssertionCount).toBe(0);
+    expect(report.badAssertionCount).toBe(0);
     expect(report.records).toBeInstanceOf(Array);
     expect(report.records.length).toBe(0);
+
+    // Clean up
+    fs.unlinkSync(reportFile);
+  });
+
+  baseTest("should count good and bad assertions correctly", async () => {
+    const reportFile = path.join(TEST_OUTPUT_DIR, "test-assertion-counts.json");
+    const reporter = new AbleDOMReporter({ outputFile: reportFile });
+
+    reporter.onBegin();
+
+    // Test with good assertion (ableDOMInstanceForTesting was available)
+    reporter.onTestEnd(
+      {
+        title: "test with good assertion",
+        location: { file: "test1.ts", line: 1, column: 1 },
+      } as MockTestCase as TestCase,
+      {
+        attachments: [
+          {
+            name: "abledom-assertion",
+            body: Buffer.from(JSON.stringify({ type: "good" })),
+            contentType: "application/json",
+          },
+        ],
+      } as MockTestResult as TestResult,
+    );
+
+    // Test with bad assertion (ableDOMInstanceForTesting was not available)
+    reporter.onTestEnd(
+      {
+        title: "test with bad assertion",
+        location: { file: "test2.ts", line: 1, column: 1 },
+      } as MockTestCase as TestCase,
+      {
+        attachments: [
+          {
+            name: "abledom-assertion",
+            body: Buffer.from(JSON.stringify({ type: "bad" })),
+            contentType: "application/json",
+          },
+        ],
+      } as MockTestResult as TestResult,
+    );
+
+    // Test with multiple assertions in same test
+    reporter.onTestEnd(
+      {
+        title: "test with multiple assertions",
+        location: { file: "test3.ts", line: 1, column: 1 },
+      } as MockTestCase as TestCase,
+      {
+        attachments: [
+          {
+            name: "abledom-assertion",
+            body: Buffer.from(JSON.stringify({ type: "good" })),
+            contentType: "application/json",
+          },
+          {
+            name: "abledom-assertion",
+            body: Buffer.from(JSON.stringify({ type: "good" })),
+            contentType: "application/json",
+          },
+          {
+            name: "abledom-assertion",
+            body: Buffer.from(JSON.stringify({ type: "bad" })),
+            contentType: "application/json",
+          },
+        ],
+      } as MockTestResult as TestResult,
+    );
+
+    reporter.onEnd({ status: "passed" } as MockFullResult as FullResult);
+
+    const content = fs.readFileSync(reportFile, "utf-8");
+    const report = JSON.parse(content);
+
+    expect(report.goodAssertionCount).toBe(3);
+    expect(report.badAssertionCount).toBe(2);
+    expect(report.records.length).toBe(0); // No abledom-test-data attachments
 
     // Clean up
     fs.unlinkSync(reportFile);
