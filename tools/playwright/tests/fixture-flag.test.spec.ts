@@ -2,8 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
+import type { WindowWithAbleDOMInstance } from "../src/types.js";
 import { test, expect } from "./fixtures.js";
-import type { WindowWithAbleDOM } from "./types.js";
 
 test.describe("fixture flag setting", () => {
   test("should set ableDOMInstanceForTestingNeeded flag on the page", async ({
@@ -16,7 +16,7 @@ test.describe("fixture flag setting", () => {
 
     // Set up a mock that tracks if idle() was called
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -30,10 +30,11 @@ test.describe("fixture flag setting", () => {
 
     // Check that the flag was set
     const flagValue = await page.evaluate(() => {
-      return (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded;
+      return (window as WindowWithAbleDOMInstance)
+        .ableDOMInstanceForTestingNeeded;
     });
 
-    expect(flagValue).toBe(true);
+    expect(flagValue).toBe(2);
   });
 
   test("should set flag even when using fixture before navigation", async ({
@@ -49,7 +50,7 @@ test.describe("fixture flag setting", () => {
 
     // Set up mock
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -63,9 +64,10 @@ test.describe("fixture flag setting", () => {
 
     // Check flag on first page
     const flag1 = await page.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
-    expect(flag1).toBe(true);
+    expect(flag1).toBe(2);
 
     // Navigate to second page
     await page.goto(
@@ -74,7 +76,7 @@ test.describe("fixture flag setting", () => {
 
     // Set up mock on second page
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -88,8 +90,9 @@ test.describe("fixture flag setting", () => {
 
     // Check flag on second page - this should also be true
     const flag2 = await page.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
-    expect(flag2).toBe(true);
+    expect(flag2).toBe(2);
   });
 });

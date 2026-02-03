@@ -68,6 +68,27 @@ export class AbleDOM {
 
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
+
+    // Check if testing mode is requested via window flag
+    // 1 = headed (force headless=false), 2 = headless (force headless=true), 3 = exact (no override)
+    const testingMode = (
+      win as Window & { ableDOMInstanceForTestingNeeded?: number }
+    ).ableDOMInstanceForTestingNeeded;
+    if (testingMode === 1 || testingMode === 2 || testingMode === 3) {
+      // Expose the instance for testing
+      (
+        win as Window & { ableDOMInstanceForTesting?: AbleDOM }
+      ).ableDOMInstanceForTesting = this;
+
+      // Override headless prop based on mode
+      if (testingMode === 1) {
+        props = { ...props, headless: false };
+      } else if (testingMode === 2) {
+        props = { ...props, headless: true };
+      }
+      // testingMode === 3: use props as-is
+    }
+
     this._props = props;
 
     const _elementsToValidate: Set<HTMLElementWithAbleDOM> = new Set();

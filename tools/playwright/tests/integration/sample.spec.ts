@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 import { test, expect } from "../fixtures.js";
-import type { WindowWithAbleDOM } from "../types.js";
+import type { WindowWithAbleDOMInstance } from "../../src/types.js";
 
 test("integration test with single issue", async ({ page }, testInfo) => {
   await page.goto(
@@ -11,7 +11,7 @@ test("integration test with single issue", async ({ page }, testInfo) => {
   );
 
   await page.evaluate(() => {
-    const win = window as WindowWithAbleDOM;
+    const win = window as WindowWithAbleDOMInstance;
     win.ableDOMInstanceForTesting = {
       idle: async () => [
         {
@@ -40,7 +40,7 @@ test("integration test with multiple issues", async ({ page }, testInfo) => {
   );
 
   await page.evaluate(() => {
-    const win = window as WindowWithAbleDOM;
+    const win = window as WindowWithAbleDOMInstance;
     win.ableDOMInstanceForTesting = {
       idle: async () => [
         {
@@ -77,7 +77,7 @@ test("integration test with no issues", async ({ page }, testInfo) => {
   );
 
   await page.evaluate(() => {
-    const win = window as WindowWithAbleDOM;
+    const win = window as WindowWithAbleDOMInstance;
     win.ableDOMInstanceForTesting = {
       idle: async () => [],
       highlightElement: () => {

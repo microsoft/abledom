@@ -8,6 +8,7 @@ import { attachAbleDOMMethodsToPage } from "./page-injector.js";
 import { AbleDOMReporter, type AbleDOMReporterOptions } from "./reporter.js";
 
 export { attachAbleDOMMethodsToPage } from "./page-injector.js";
+export type { AbleDOMTestingMode, WindowWithAbleDOMInstance } from "./types.js";
 export {
   AbleDOMReporter,
   type AbleDOMReporterOptions,

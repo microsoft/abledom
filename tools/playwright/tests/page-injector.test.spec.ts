@@ -4,8 +4,8 @@
  */
 import { test as baseTest } from "@playwright/test";
 import { attachAbleDOMMethodsToPage } from "../src/index";
+import type { WindowWithAbleDOMInstance } from "../src/types.js";
 import { test, expect } from "./fixtures.js";
-import type { WindowWithAbleDOM } from "./types.js";
 
 test.describe("page-injector with mocked AbleDOM", () => {
   test("should report AbleDOM issues with correct caller location", async ({
@@ -18,7 +18,7 @@ test.describe("page-injector with mocked AbleDOM", () => {
 
     // Mock the AbleDOM instance with issues
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => {
           // Return mock accessibility issues
@@ -66,7 +66,7 @@ test.describe("page-injector with mocked AbleDOM", () => {
 
     // Mock AbleDOM with NO issues
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => {
           // Return empty array - no issues
@@ -98,7 +98,7 @@ test.describe("page-injector with mocked AbleDOM", () => {
 
     // Mock AbleDOM to return different issues on each call
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       let callCount = 0;
 
       win.ableDOMInstanceForTesting = {
@@ -172,7 +172,7 @@ test.describe("page-injector with mocked AbleDOM", () => {
 
     // Mock AbleDOM to return multiple issues at once
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => {
           return [
@@ -226,7 +226,7 @@ test.describe("page-injector with mocked AbleDOM", () => {
 
     // Mock AbleDOM to return an issue
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => {
           return [
@@ -271,7 +271,7 @@ baseTest("should work without testInfo parameter", async ({ page }) => {
 
   // Mock AbleDOM with issues
   await page.evaluate(() => {
-    const win = window as WindowWithAbleDOM;
+    const win = window as WindowWithAbleDOMInstance;
     win.ableDOMInstanceForTesting = {
       idle: async () => {
         return [

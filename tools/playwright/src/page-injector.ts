@@ -4,16 +4,7 @@
  */
 
 import type { Page, Locator, TestInfo } from "@playwright/test";
-
-interface IWindowWithAbleDOMInstance extends Window {
-  ableDOMInstanceForTestingNeeded?: boolean;
-  ableDOMInstanceForTesting?: {
-    idle: () => Promise<
-      { id: string; message: string; element: HTMLElement }[]
-    >;
-    highlightElement: (element: HTMLElement, scrollIntoView: boolean) => void;
-  };
-}
+import type { AbleDOMTestingMode, WindowWithAbleDOMInstance } from "./types.js";
 
 interface ILocatorMonkeyPatchedWithAbleDOM extends Locator {
   __locatorIsMonkeyPatchedWithAbleDOM?: boolean;
@@ -79,6 +70,7 @@ function getCallerLocation(
  *
  * @param page - The Playwright Page object to attach methods to
  * @param testInfo - Optional TestInfo object for reporting issues to the custom reporter
+ * @param mode - Testing mode: 1=headed (show UI), 2=headless (hide UI), 3=exact (use props as-is). Defaults to 2.
  *
  * @example
  * ```typescript
@@ -87,7 +79,7 @@ function getCallerLocation(
  *
  * test('my test', async ({ page }, testInfo) => {
  *   await page.goto('https://example.com');
- *   attachAbleDOMMethodsToPage(page, testInfo);
+ *   await attachAbleDOMMethodsToPage(page, testInfo);
  *
  *   // All subsequent locator actions will trigger AbleDOM checks
  *   await page.locator('button').click();
@@ -97,6 +89,7 @@ function getCallerLocation(
 export async function attachAbleDOMMethodsToPage(
   page: Page,
   testInfo?: TestInfo,
+  mode: AbleDOMTestingMode = 2,
 ): Promise<void> {
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
@@ -106,20 +99,20 @@ export async function attachAbleDOMMethodsToPage(
 
   // Add an init script to set the flag before any page scripts run on navigations
   // This MUST be awaited to ensure it's registered before any navigation happens
-  await page.addInitScript(() => {
+  await page.addInitScript((modeValue) => {
     (
-      window as { ableDOMInstanceForTestingNeeded?: boolean }
-    ).ableDOMInstanceForTestingNeeded = true;
-  });
+      window as { ableDOMInstanceForTestingNeeded?: number }
+    ).ableDOMInstanceForTestingNeeded = modeValue;
+  }, mode);
 
   // Also set the flag immediately on the current page context (in case the app is already loaded)
   // Errors are caught silently since the page may be on about:blank or context may be invalid
   await page
-    .evaluate(() => {
+    .evaluate((modeValue) => {
       (
-        window as unknown as IWindowWithAbleDOMInstance
-      ).ableDOMInstanceForTestingNeeded = true;
-    })
+        window as unknown as WindowWithAbleDOMInstance
+      ).ableDOMInstanceForTestingNeeded = modeValue;
+    }, mode)
     .catch(() => {
       /* ignore - addInitScript will set flag after navigation */
     });
@@ -153,7 +146,7 @@ export async function attachAbleDOMMethodsToPage(
       const currentPage = this.page();
 
       const issues = await currentPage.evaluate(async () => {
-        const win = window as unknown as IWindowWithAbleDOMInstance;
+        const win = window as unknown as WindowWithAbleDOMInstance;
         const issues = await win.ableDOMInstanceForTesting?.idle();
         const el = issues?.[0]?.element;
 

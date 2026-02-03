@@ -2,8 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
+import type { WindowWithAbleDOMInstance } from "../src/types.js";
 import { testWithAttachAbleDOM as test, expect } from "./fixtures.js";
-import type { WindowWithAbleDOM } from "./types.js";
 
 test.describe("createAbleDOMTest fixture", () => {
   test("should provide attachAbleDOM function", async ({
@@ -41,7 +41,7 @@ test.describe("createAbleDOMTest fixture", () => {
 
     // Set up mock
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -55,10 +55,11 @@ test.describe("createAbleDOMTest fixture", () => {
 
     // Check that the flag was set
     const flagValue = await page.evaluate(() => {
-      return (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded;
+      return (window as WindowWithAbleDOMInstance)
+        .ableDOMInstanceForTestingNeeded;
     });
 
-    expect(flagValue).toBe(true);
+    expect(flagValue).toBe(2);
 
     await context.close();
   });
@@ -80,7 +81,7 @@ test.describe("createAbleDOMTest fixture", () => {
 
     // Set up mock that returns an issue
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [
           {
@@ -139,7 +140,7 @@ test.describe("createAbleDOMTest fixture", () => {
     // Set up mocks on both pages
     for (const page of [page1, page2]) {
       await page.evaluate(() => {
-        const win = window as WindowWithAbleDOM;
+        const win = window as WindowWithAbleDOMInstance;
         win.ableDOMInstanceForTesting = {
           idle: async () => [],
           highlightElement: () => {
@@ -155,14 +156,16 @@ test.describe("createAbleDOMTest fixture", () => {
 
     // Both should have the flag set
     const flag1 = await page1.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
     const flag2 = await page2.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
 
-    expect(flag1).toBe(true);
-    expect(flag2).toBe(true);
+    expect(flag1).toBe(2);
+    expect(flag2).toBe(2);
 
     await context.close();
   });
@@ -183,7 +186,7 @@ test.describe("createAbleDOMTest fixture", () => {
     await attachAbleDOM(page);
 
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -195,9 +198,10 @@ test.describe("createAbleDOMTest fixture", () => {
     await page.locator("#page1").waitFor();
 
     const flag1 = await page.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
-    expect(flag1).toBe(true);
+    expect(flag1).toBe(2);
 
     // Second navigation - flag should be set by addInitScript before page scripts run
     await page.goto(
@@ -207,12 +211,13 @@ test.describe("createAbleDOMTest fixture", () => {
     // Check flag immediately after navigation (before setting up mock)
     // The addInitScript should have already set it
     const flag2BeforeMock = await page.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
-    expect(flag2BeforeMock).toBe(true);
+    expect(flag2BeforeMock).toBe(2);
 
     await page.evaluate(() => {
-      const win = window as WindowWithAbleDOM;
+      const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => [],
         highlightElement: () => {
@@ -224,9 +229,10 @@ test.describe("createAbleDOMTest fixture", () => {
     await page.locator("#page2").waitFor();
 
     const flag2 = await page.evaluate(
-      () => (window as WindowWithAbleDOM).ableDOMInstanceForTestingNeeded,
+      () =>
+        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
     );
-    expect(flag2).toBe(true);
+    expect(flag2).toBe(2);
 
     await context.close();
   });
