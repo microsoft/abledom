@@ -157,7 +157,8 @@ export function attachAbleDOMMethodsToPage(
         const el = issues?.[0]?.element;
 
         if (el) {
-          win.ableDOMInstanceForTesting?.highlightElement(el, true);
+          // TODO: Make highlighting flag-dependent.
+          // win.ableDOMInstanceForTesting?.highlightElement(el, true);
         }
 
         return issues?.map((issue) => ({
