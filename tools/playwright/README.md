@@ -53,10 +53,10 @@ For automatic attachment without manual setup in each test:
 ```typescript
 // fixtures.ts
 import { test as base } from "@playwright/test";
-import { createAbleDOMFixture } from "abledom-playwright";
+import { createAbleDOMPageFixture } from "abledom-playwright";
 
 export const test = base.extend({
-  page: createAbleDOMFixture(),
+  page: createAbleDOMPageFixture(),
 });
 
 // my-test.spec.ts
@@ -93,7 +93,7 @@ Directly attaches AbleDOM accessibility checking to a Playwright page.
 - `page: Page` - The Playwright Page object
 - `testInfo?: TestInfo` - Optional TestInfo for reporting
 
-### `createAbleDOMFixture()`
+### `createAbleDOMPageFixture()`
 
 Creates a Playwright fixture that automatically attaches AbleDOM to pages.
 

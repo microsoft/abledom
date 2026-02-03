@@ -26,7 +26,7 @@ export {
 export interface AbleDOMSetupOptions {
   /**
    * Output file path for the accessibility report.
-   * Defaults to 'abledom-report.txt'.
+   * Defaults to 'abledom-report.json'.
    */
   reportFile?: string;
 }
@@ -67,7 +67,7 @@ export interface AbleDOMSetupResult {
  * // playwright.config.ts
  * import { setupAbleDOM } from 'abledom-playwright';
  *
- * const abledom = setupAbleDOM({ reportFile: 'accessibility-report.txt' });
+ * const abledom = setupAbleDOM({ reportFile: 'accessibility-report.json' });
  *
  * export default defineConfig({
  *   reporter: [
@@ -99,7 +99,7 @@ export function setupAbleDOM(
   options: AbleDOMSetupOptions = {},
 ): AbleDOMSetupResult {
   const reporterOptions: AbleDOMReporterOptions = {
-    outputFile: options.reportFile || "abledom-report.txt",
+    outputFile: options.reportFile || "abledom-report.json",
   };
 
   return {
