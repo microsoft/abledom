@@ -12,7 +12,7 @@ export default defineConfig({
   reporter: [
     [
       "../../src/reporter",
-      { outputFile: "../../.test-output/integration-report.txt" },
+      { outputFile: "../../.test-output/integration-report.json" },
     ],
   ],
   use: {

@@ -27,7 +27,10 @@ if (!fs.existsSync(TEST_OUTPUT_DIR)) {
   fs.mkdirSync(TEST_OUTPUT_DIR, { recursive: true });
 }
 
-const TEST_REPORT_FILE = path.join(TEST_OUTPUT_DIR, "reporter-test-output.txt");
+const TEST_REPORT_FILE = path.join(
+  TEST_OUTPUT_DIR,
+  "reporter-test-output.json",
+);
 
 baseTest.describe("AbleDOMReporter", () => {
   baseTest.afterAll(() => {
@@ -90,27 +93,30 @@ baseTest.describe("AbleDOMReporter", () => {
 
     // Read and verify content
     const content = fs.readFileSync(TEST_REPORT_FILE, "utf-8");
+    const report = JSON.parse(content);
 
-    // Verify header
-    expect(content).toContain("AbleDOM Accessibility Report");
-    expect(content).toContain("Generated:");
-    expect(content).toContain("Total Issues: 1");
+    // Verify structure
+    expect(report.date).toBeDefined();
+    expect(report.records).toBeInstanceOf(Array);
+    expect(report.records.length).toBe(1);
 
-    // Verify test info
-    expect(content).toContain("Test: test accessibility check");
-    expect(content).toContain("Test Location: /path/to/test.spec.ts:10:5");
-    expect(content).toContain("Called From: /path/to/test.spec.ts:25:10");
-
-    // Verify issue data
-    expect(content).toContain('"type": "AbleDOM Issue"');
-    expect(content).toContain(
-      '"message": "Button is missing an accessible label"',
+    // Verify record data
+    const record = report.records[0];
+    expect(record.testTitle).toBe("test accessibility check");
+    expect(record.testFile).toBe("/path/to/test.spec.ts");
+    expect(record.testLine).toBe(10);
+    expect(record.testColumn).toBe(5);
+    expect(record.data.type).toBe("AbleDOM Issue");
+    expect(record.data.callerFile).toBe("/path/to/test.spec.ts");
+    expect(record.data.callerLine).toBe(25);
+    expect(record.data.issues[0].id).toBe("missing-label");
+    expect(record.data.issues[0].message).toBe(
+      "Button is missing an accessible label",
     );
-    expect(content).toContain("missing-label");
   });
 
   baseTest("should handle multiple issues in report", async () => {
-    const reportFile = path.join(TEST_OUTPUT_DIR, "test-multiple-issues.txt");
+    const reportFile = path.join(TEST_OUTPUT_DIR, "test-multiple-issues.json");
     const reporter = new AbleDOMReporter({ outputFile: reportFile });
 
     reporter.onBegin();
@@ -168,21 +174,20 @@ baseTest.describe("AbleDOMReporter", () => {
     reporter.onEnd({ status: "passed" } as MockFullResult as FullResult);
 
     const content = fs.readFileSync(reportFile, "utf-8");
+    const report = JSON.parse(content);
 
-    expect(content).toContain("Total Issues: 2");
-    expect(content).toContain("first test");
-    expect(content).toContain("second test");
-    expect(content).toContain("First issue");
-    expect(content).toContain("Second issue");
-    expect(content).toContain("Issue 1:");
-    expect(content).toContain("Issue 2:");
+    expect(report.records.length).toBe(2);
+    expect(report.records[0].testTitle).toBe("first test");
+    expect(report.records[1].testTitle).toBe("second test");
+    expect(report.records[0].data.issues[0].message).toBe("First issue");
+    expect(report.records[1].data.issues[0].message).toBe("Second issue");
 
     // Clean up
     fs.unlinkSync(reportFile);
   });
 
   baseTest("should handle no issues gracefully", async () => {
-    const reportFile = path.join(TEST_OUTPUT_DIR, "test-no-issues.txt");
+    const reportFile = path.join(TEST_OUTPUT_DIR, "test-no-issues.json");
     const reporter = new AbleDOMReporter({ outputFile: reportFile });
 
     reporter.onBegin();
@@ -199,11 +204,11 @@ baseTest.describe("AbleDOMReporter", () => {
     reporter.onEnd({ status: "passed" } as MockFullResult as FullResult);
 
     const content = fs.readFileSync(reportFile, "utf-8");
+    const report = JSON.parse(content);
 
-    expect(content).toContain("Total Issues: 0");
-    expect(content).toContain(
-      "No accessibility issues were found during the test run.",
-    );
+    expect(report.date).toBeDefined();
+    expect(report.records).toBeInstanceOf(Array);
+    expect(report.records.length).toBe(0);
 
     // Clean up
     fs.unlinkSync(reportFile);
@@ -214,7 +219,7 @@ baseTest.describe("AbleDOMReporter", () => {
     reporter.onBegin();
     reporter.onEnd({ status: "passed" } as MockFullResult as FullResult);
 
-    const defaultPath = path.resolve(process.cwd(), "abledom-report.txt");
+    const defaultPath = path.resolve(process.cwd(), "abledom-report.json");
     expect(fs.existsSync(defaultPath)).toBe(true);
 
     // Clean up

@@ -29,7 +29,7 @@ export interface ReportEntry {
  */
 export interface AbleDOMReporterOptions {
   /**
-   * Output file path for the report. Defaults to 'abledom-report.txt'.
+   * Output file path for the report. Defaults to 'abledom-report.json'.
    */
   outputFile?: string;
 }
@@ -45,7 +45,7 @@ export interface AbleDOMReporterOptions {
  * export default defineConfig({
  *   reporter: [
  *     ['list'],
- *     [AbleDOMReporter, { outputFile: 'accessibility-report.txt' }],
+ *     [AbleDOMReporter, { outputFile: 'accessibility-report.json' }],
  *   ],
  * });
  * ```
@@ -55,7 +55,7 @@ export class AbleDOMReporter implements Reporter {
   private outputPath: string;
 
   constructor(options: AbleDOMReporterOptions = {}) {
-    this.outputPath = options.outputFile || "abledom-report.txt";
+    this.outputPath = options.outputFile || "abledom-report.json";
   }
 
   onBegin(): void {
@@ -116,51 +116,12 @@ export class AbleDOMReporter implements Reporter {
     // Write all collected data to a file
     const outputFilePath = path.resolve(process.cwd(), this.outputPath);
 
-    let content = "AbleDOM Accessibility Report\n";
-    content += "=".repeat(80) + "\n";
-    content += `Generated: ${new Date().toISOString()}\n`;
-    content += `Total Issues: ${this.collectedData.length}\n`;
-    content += "=".repeat(80) + "\n\n";
+    const report = {
+      date: new Date().toISOString(),
+      records: this.collectedData,
+    };
 
-    if (this.collectedData.length === 0) {
-      content += "No accessibility issues were found during the test run.\n";
-    } else {
-      this.collectedData.forEach((entry, index) => {
-        content += `Issue ${index + 1}:\n`;
-        content += `  Test: ${entry.testTitle}\n`;
-        content += `  Test Location: ${entry.testFile}:${entry.testLine}:${entry.testColumn}\n`;
-
-        // Check if this is an AbleDOM issue with caller location
-        if (
-          typeof entry.data === "object" &&
-          entry.data !== null &&
-          "type" in entry.data &&
-          (entry.data as { type: unknown }).type === "AbleDOM Issue" &&
-          "callerFile" in entry.data &&
-          "callerLine" in entry.data &&
-          "callerColumn" in entry.data
-        ) {
-          const issueData = entry.data as {
-            callerFile: string;
-            callerLine: number;
-            callerColumn: number;
-          };
-          content += `  Called From: ${issueData.callerFile}:${issueData.callerLine}:${issueData.callerColumn}\n`;
-        }
-
-        content += `  Time: ${entry.timestamp}\n`;
-        content += `  Data:\n`;
-
-        // Format the data nicely
-        if (typeof entry.data === "object") {
-          content += `    ${JSON.stringify(entry.data, null, 4).split("\n").join("\n    ")}\n`;
-        } else {
-          content += `    ${entry.data}\n`;
-        }
-
-        content += "-".repeat(80) + "\n\n";
-      });
-    }
+    const content = JSON.stringify(report, null, 2);
 
     // Ensure directory exists
     const dir = path.dirname(outputFilePath);

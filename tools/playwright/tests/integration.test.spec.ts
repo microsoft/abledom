@@ -12,10 +12,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const INTEGRATION_DIR = path.join(__dirname, "integration");
 const TEST_OUTPUT_DIR = path.join(__dirname, "..", ".test-output");
-const REPORT_FILE = path.join(TEST_OUTPUT_DIR, "integration-report.txt");
+const REPORT_FILE = path.join(TEST_OUTPUT_DIR, "integration-report.json");
 
-// Store report content for all tests to use
-let reportContent: string = "";
+// Store report for all tests to use
+let report: {
+  date: string;
+  records: Array<{
+    testTitle: string;
+    testFile: string;
+    testLine: number;
+    testColumn: number;
+    data: Record<string, unknown>;
+    timestamp: string;
+  }>;
+} = { date: "", records: [] };
 
 baseTest.describe.serial("fixture and reporter integration", () => {
   baseTest("run integration test suite and generate report", () => {
@@ -34,62 +44,73 @@ baseTest.describe.serial("fixture and reporter integration", () => {
     // Verify file was created
     expect(fs.existsSync(REPORT_FILE)).toBe(true);
 
-    // Read content for subsequent tests
-    reportContent = fs.readFileSync(REPORT_FILE, "utf-8");
-    expect(reportContent.length).toBeGreaterThan(0);
+    // Read and parse JSON for subsequent tests
+    const content = fs.readFileSync(REPORT_FILE, "utf-8");
+    report = JSON.parse(content);
+    expect(report.records.length).toBeGreaterThan(0);
   });
 
-  baseTest("should contain report header", () => {
-    expect(reportContent).toContain("AbleDOM Accessibility Report");
-    expect(reportContent).toContain("Generated:");
-    expect(reportContent).toContain("Total Issues:");
+  baseTest("should contain report date", () => {
+    expect(report.date).toBeDefined();
+    expect(new Date(report.date).getTime()).not.toBeNaN();
   });
 
   baseTest("should contain issues from fixture-based tests", () => {
-    // Should have 2 entries (one test has 1 issue, another has 2 issues bundled)
-    expect(reportContent).toContain("Total Issues: 2");
+    // Should have 2 records (one test has 1 issue, another has 2 issues bundled)
+    expect(report.records.length).toBe(2);
+
+    const allIssues = report.records.flatMap(
+      (r) => (r.data.issues as Array<{ id: string; message: string }>) || [],
+    );
 
     // Issue from first test
-    expect(reportContent).toContain("Integration test issue one");
-    expect(reportContent).toContain("integration-issue-1");
+    expect(
+      allIssues.some((i) => i.message === "Integration test issue one"),
+    ).toBe(true);
+    expect(allIssues.some((i) => i.id === "integration-issue-1")).toBe(true);
 
     // Issues from second test (bundled together)
-    expect(reportContent).toContain("Integration test issue two");
-    expect(reportContent).toContain("Integration test issue three");
-    expect(reportContent).toContain("integration-issue-2");
-    expect(reportContent).toContain("integration-issue-3");
+    expect(
+      allIssues.some((i) => i.message === "Integration test issue two"),
+    ).toBe(true);
+    expect(
+      allIssues.some((i) => i.message === "Integration test issue three"),
+    ).toBe(true);
+    expect(allIssues.some((i) => i.id === "integration-issue-2")).toBe(true);
+    expect(allIssues.some((i) => i.id === "integration-issue-3")).toBe(true);
   });
 
   baseTest("should contain correct test names", () => {
-    expect(reportContent).toContain("Test: integration test with single issue");
-    expect(reportContent).toContain(
-      "Test: integration test with multiple issues",
-    );
+    const testTitles = report.records.map((r) => r.testTitle);
+    expect(testTitles).toContain("integration test with single issue");
+    expect(testTitles).toContain("integration test with multiple issues");
     // The test with no issues should NOT appear in the report
-    expect(reportContent).not.toContain(
-      "Test: integration test with no issues",
-    );
+    expect(testTitles).not.toContain("integration test with no issues");
   });
 
   baseTest("should contain caller locations", () => {
-    expect(reportContent).toContain("Called From:");
-    expect(reportContent).toContain("sample.spec.ts");
-    expect(reportContent).toContain('"callerFile":');
-    expect(reportContent).toContain('"callerLine":');
-    expect(reportContent).toContain('"callerColumn":');
+    for (const record of report.records) {
+      expect(record.data.callerFile).toBeDefined();
+      expect(record.data.callerLine).toBeDefined();
+      expect(record.data.callerColumn).toBeDefined();
+      expect(String(record.data.callerFile)).toContain("sample.spec.ts");
+    }
   });
 
-  baseTest("should contain proper JSON data structure", () => {
-    expect(reportContent).toContain('"type": "AbleDOM Issue"');
-    expect(reportContent).toContain('"issueCount":');
-    expect(reportContent).toContain('"issues":');
-    expect(reportContent).toContain('"fullMessage":');
+  baseTest("should contain proper data structure", () => {
+    for (const record of report.records) {
+      expect(record.data.type).toBe("AbleDOM Issue");
+      expect(record.data.issueCount).toBeDefined();
+      expect(record.data.issues).toBeDefined();
+      expect(record.data.fullMessage).toBeDefined();
+    }
   });
 
   baseTest("should contain element HTML in report", () => {
+    const content = JSON.stringify(report);
     // Elements should be serialized with their HTML
-    expect(reportContent).toContain("<button");
-    expect(reportContent).toContain("<input");
+    expect(content).toContain("<button");
+    expect(content).toContain("<input");
   });
 
   baseTest("cleanup", () => {

@@ -15,7 +15,7 @@ export default defineConfig({
 
   reporter: [
     ["list"],
-    ["../src/reporter", { outputFile: ".test-output/test-report.txt" }],
+    ["../src/reporter", { outputFile: ".test-output/test-report.json" }],
   ],
 
   use: {
