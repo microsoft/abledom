@@ -303,7 +303,10 @@ baseTest.describe("AbleDOMReporter", () => {
     reporter.onBegin();
     reporter.onEnd({ status: "passed" } as MockFullResult as FullResult);
 
-    const defaultPath = path.resolve(process.cwd(), "abledom-report.json");
+    const defaultPath = path.resolve(
+      process.cwd(),
+      "./test-results/abledom.json",
+    );
     expect(fs.existsSync(defaultPath)).toBe(true);
 
     // Clean up

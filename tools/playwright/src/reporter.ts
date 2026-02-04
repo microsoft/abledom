@@ -29,7 +29,7 @@ export interface ReportEntry {
  */
 export interface AbleDOMReporterOptions {
   /**
-   * Output file path for the report. Defaults to 'abledom-report.json'.
+   * Output file path for the report. Defaults to './test-results/abledom.json'.
    */
   outputFile?: string;
 }
@@ -57,7 +57,7 @@ export class AbleDOMReporter implements Reporter {
   private badAssertionCount = 0;
 
   constructor(options: AbleDOMReporterOptions = {}) {
-    this.outputPath = options.outputFile || "abledom-report.json";
+    this.outputPath = options.outputFile || "./test-results/abledom.json";
   }
 
   onBegin(): void {
