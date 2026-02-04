@@ -74,8 +74,6 @@ baseTest.describe("AbleDOMReporter", () => {
                   element: "<button>Click me</button>",
                 },
               ],
-              fullMessage:
-                "AbleDOM found issue: Button is missing an accessible label",
             }),
           ),
           contentType: "application/json",

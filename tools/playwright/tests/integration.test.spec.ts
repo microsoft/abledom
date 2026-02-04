@@ -102,7 +102,6 @@ baseTest.describe.serial("fixture and reporter integration", () => {
       expect(record.data.type).toBe("AbleDOM Issue");
       expect(record.data.issueCount).toBeDefined();
       expect(record.data.issues).toBeDefined();
-      expect(record.data.fullMessage).toBeDefined();
     }
   });
 

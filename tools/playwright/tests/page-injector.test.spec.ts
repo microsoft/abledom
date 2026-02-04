@@ -211,10 +211,6 @@ test.describe("page-injector with mocked AbleDOM", () => {
     const reportData = JSON.parse(customDataAttachments[0].body!.toString());
     expect(reportData.issueCount).toBe(3);
     expect(reportData.issues).toHaveLength(3);
-    expect(reportData.fullMessage).toContain("AbleDOM found 3 issues");
-    expect(reportData.fullMessage).toContain("First button missing label");
-    expect(reportData.fullMessage).toContain("Second button missing label");
-    expect(reportData.fullMessage).toContain("Input missing label");
   });
 
   test("should report correct caller location when using click()", async ({

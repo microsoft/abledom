@@ -185,17 +185,6 @@ export async function attachAbleDOMMethodsToPage(
       }
 
       if (issues && issues.length) {
-        const issuesText = issues.map(
-          (issue) => `
-    message: ${issue.message}
-    element: ${issue.element}
-    parentParent: ${issue.parentParent}`,
-        );
-
-        const errorMessage = `AbleDOM found ${issues.length > 1 ? `${issues.length} ` : ""}issue${
-          issues.length > 1 ? "s" : ""
-        }:\n${issuesText.join("\n\n")}`;
-
         // Capture stack trace to find the actual caller location
         const error = new Error();
         const callerLocation = getCallerLocation(error.stack);
@@ -215,7 +204,6 @@ export async function attachAbleDOMMethodsToPage(
                 element: issue.element,
                 parentParent: issue.parentParent,
               })),
-              fullMessage: errorMessage,
             }),
             contentType: "application/json",
           });
