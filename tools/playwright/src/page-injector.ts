@@ -5,6 +5,7 @@
 
 import type { Page, Locator, TestInfo } from "@playwright/test";
 import type { WindowWithAbleDOMInstance } from "./types.js";
+import { normalizeFilePath } from "./utils.js";
 
 interface LocatorMonkeyPatchedWithAbleDOM extends Locator {
   __locatorIsMonkeyPatchedWithAbleDOM?: boolean;
@@ -46,15 +47,19 @@ function getCallerLocation(
     // Match patterns like:
     // at Context.<anonymous> (/path/to/file.spec.ts:25:30)
     // at /path/to/file.spec.ts:25:30
+    // at webpack:/@scope/package/file.spec.ts:25:30
     const match = line.match(/\((.+):(\d+):(\d+)\)|at\s+(.+):(\d+):(\d+)/);
     if (match) {
-      const file = match[1] || match[4];
+      const rawFile = match[1] || match[4];
       const lineNum = parseInt(match[2] || match[5], 10);
       const column = parseInt(match[3] || match[6], 10);
 
       // Make sure it's a test file
-      if (file && (file.includes(".spec.") || file.includes(".test."))) {
-        return { file, line: lineNum, column };
+      if (
+        rawFile &&
+        (rawFile.includes(".spec.") || rawFile.includes(".test."))
+      ) {
+        return { file: normalizeFilePath(rawFile), line: lineNum, column };
       }
     }
   }

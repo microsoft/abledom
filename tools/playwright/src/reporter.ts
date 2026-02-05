@@ -11,6 +11,7 @@ import type {
   TestResult,
   FullResult,
 } from "@playwright/test/reporter";
+import { normalizeFilePath } from "./utils.js";
 
 /**
  * Information about a test location.
@@ -179,7 +180,7 @@ export class AbleDOMReporter implements Reporter {
           };
           const testLocation: TestLocation = {
             testTitle: test.title,
-            testFile: test.location.file,
+            testFile: normalizeFilePath(test.location.file),
             testLine: test.location.line,
             testColumn: test.location.column,
           };
@@ -198,7 +199,7 @@ export class AbleDOMReporter implements Reporter {
           ) as AbleDOMTestData;
           this.addData(
             test.title,
-            test.location.file,
+            normalizeFilePath(test.location.file),
             test.location.line,
             test.location.column,
             data,
