@@ -92,7 +92,6 @@ Directly attaches AbleDOM accessibility checking to a Playwright page.
 
 - `page: Page` - The Playwright Page object
 - `testInfo?: TestInfo` - Optional TestInfo for reporting
-- `mode?: AbleDOMTestingMode` - Testing mode (1=headed, 2=headless, 3=exact). Defaults to 2.
 
 **Important:** This is an async function and MUST be awaited before navigating the page.
 
