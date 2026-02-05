@@ -13,6 +13,16 @@ import type {
 } from "@playwright/test/reporter";
 
 /**
+ * Information about a test location.
+ */
+export interface TestLocation {
+  testTitle: string;
+  testFile: string;
+  testLine: number;
+  testColumn: number;
+}
+
+/**
  * A single entry in the accessibility report.
  */
 export interface ReportEntry {
@@ -53,8 +63,8 @@ export interface AbleDOMReporterOptions {
 export class AbleDOMReporter implements Reporter {
   private collectedData: ReportEntry[] = [];
   private outputPath: string;
-  private goodAssertionCount = 0;
-  private badAssertionCount = 0;
+  private goodAssertions: TestLocation[] = [];
+  private badAssertions: TestLocation[] = [];
 
   constructor(options: AbleDOMReporterOptions = {}) {
     this.outputPath = options.outputFile || "./test-results/abledom.json";
@@ -63,8 +73,8 @@ export class AbleDOMReporter implements Reporter {
   onBegin(): void {
     // Clear any existing data when test run begins
     this.collectedData = [];
-    this.goodAssertionCount = 0;
-    this.badAssertionCount = 0;
+    this.goodAssertions = [];
+    this.badAssertions = [];
   }
 
   /**
@@ -96,10 +106,16 @@ export class AbleDOMReporter implements Reporter {
           const data = JSON.parse(attachment.body.toString()) as {
             type: "good" | "bad";
           };
+          const testLocation: TestLocation = {
+            testTitle: test.title,
+            testFile: test.location.file,
+            testLine: test.location.line,
+            testColumn: test.location.column,
+          };
           if (data.type === "good") {
-            this.goodAssertionCount++;
+            this.goodAssertions.push(testLocation);
           } else if (data.type === "bad") {
-            this.badAssertionCount++;
+            this.badAssertions.push(testLocation);
           }
         } catch {
           // Ignore malformed assertion data
@@ -135,8 +151,8 @@ export class AbleDOMReporter implements Reporter {
 
     const report = {
       date: new Date().toISOString(),
-      goodAssertionCount: this.goodAssertionCount,
-      badAssertionCount: this.badAssertionCount,
+      goodAssertions: this.goodAssertions,
+      badAssertions: this.badAssertions,
       records: this.collectedData,
     };
 

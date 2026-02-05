@@ -95,8 +95,10 @@ baseTest.describe("AbleDOMReporter", () => {
 
     // Verify structure
     expect(report.date).toBeDefined();
-    expect(report.goodAssertionCount).toBe(0);
-    expect(report.badAssertionCount).toBe(0);
+    expect(report.goodAssertions).toBeInstanceOf(Array);
+    expect(report.goodAssertions.length).toBe(0);
+    expect(report.badAssertions).toBeInstanceOf(Array);
+    expect(report.badAssertions.length).toBe(0);
     expect(report.records).toBeInstanceOf(Array);
     expect(report.records.length).toBe(1);
 
@@ -207,8 +209,10 @@ baseTest.describe("AbleDOMReporter", () => {
     const report = JSON.parse(content);
 
     expect(report.date).toBeDefined();
-    expect(report.goodAssertionCount).toBe(0);
-    expect(report.badAssertionCount).toBe(0);
+    expect(report.goodAssertions).toBeInstanceOf(Array);
+    expect(report.goodAssertions.length).toBe(0);
+    expect(report.badAssertions).toBeInstanceOf(Array);
+    expect(report.badAssertions.length).toBe(0);
     expect(report.records).toBeInstanceOf(Array);
     expect(report.records.length).toBe(0);
 
@@ -288,9 +292,43 @@ baseTest.describe("AbleDOMReporter", () => {
     const content = fs.readFileSync(reportFile, "utf-8");
     const report = JSON.parse(content);
 
-    expect(report.goodAssertionCount).toBe(3);
-    expect(report.badAssertionCount).toBe(2);
+    expect(report.goodAssertions.length).toBe(3);
+    expect(report.badAssertions.length).toBe(2);
     expect(report.records.length).toBe(0); // No abledom-test-data attachments
+
+    // Verify good assertions have correct test location info
+    expect(report.goodAssertions[0]).toEqual({
+      testTitle: "test with good assertion",
+      testFile: "test1.ts",
+      testLine: 1,
+      testColumn: 1,
+    });
+    expect(report.goodAssertions[1]).toEqual({
+      testTitle: "test with multiple assertions",
+      testFile: "test3.ts",
+      testLine: 1,
+      testColumn: 1,
+    });
+    expect(report.goodAssertions[2]).toEqual({
+      testTitle: "test with multiple assertions",
+      testFile: "test3.ts",
+      testLine: 1,
+      testColumn: 1,
+    });
+
+    // Verify bad assertions have correct test location info
+    expect(report.badAssertions[0]).toEqual({
+      testTitle: "test with bad assertion",
+      testFile: "test2.ts",
+      testLine: 1,
+      testColumn: 1,
+    });
+    expect(report.badAssertions[1]).toEqual({
+      testTitle: "test with multiple assertions",
+      testFile: "test3.ts",
+      testLine: 1,
+      testColumn: 1,
+    });
 
     // Clean up
     fs.unlinkSync(reportFile);
