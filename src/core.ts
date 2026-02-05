@@ -40,10 +40,14 @@ export interface AbleDOMProps {
     ): void;
     onIssueRemoved?(element: HTMLElement, rule: ValidationRule): void;
   };
+  // Expose the created AbleDOM instance as window.ableDOMInstanceForTesting,
+  // in order for abledom-playwright to be able to automatically grab notifications
+  // during the tests.
+  exposeInstanceForTesting?: boolean;
 }
 
 export class AbleDOM {
-  private _win: Window;
+  private _win: Window & { ableDOMInstanceForTesting?: AbleDOM };
   private _isDisposed = false;
   private _props: AbleDOMProps | undefined = undefined;
   private _observer: MutationObserver;
@@ -68,6 +72,11 @@ export class AbleDOM {
 
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
+
+    if (props.exposeInstanceForTesting) {
+      this._win.ableDOMInstanceForTesting = this;
+    }
+
     this._props = props;
 
     const _elementsToValidate: Set<HTMLElementWithAbleDOM> = new Set();

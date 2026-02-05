@@ -1,0 +1,70 @@
+{
+  "name": "abledom-playwright",
+  "version": "0.0.11",
+  "description": "AbleDOM tools for Playwright",
+  "author": "Marat Abdullin <marata@microsoft.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "import": "./dist/reporter.js",
+      "default": "./dist/reporter.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist .test-output test-results",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "npm run lint -- --fix",
+    "test": "playwright test --config=tests/playwright.config.ts",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run format && npm run build"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.58.1",
+    "@types/node": "^25.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
+    "rimraf": "^6.1.2",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/microsoft/abledom.git",
+    "directory": "tools/playwright"
+  },
+  "bugs": {
+    "url": "https://github.com/microsoft/abledom/issues"
+  },
+  "homepage": "https://github.com/microsoft/abledom/tree/main/tools/playwright#readme",
+  "keywords": [
+    "playwright",
+    "accessibility",
+    "a11y",
+    "testing",
+    "abledom"
+  ]
+}

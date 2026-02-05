@@ -1,4 +1,6 @@
 # Ignore artifacts:
 dist
 node_modules
+test-results
+.test-output
 *.yml

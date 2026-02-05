@@ -12,6 +12,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+          contents: read
+          pull-requests: write
 
     steps:
       - uses: actions/checkout@v3
@@ -21,15 +24,77 @@ jobs:
         with:
           node-version: 22.x
 
-      - run: npm install
-      - run: npx playwright install
-      - run: npm run type-check
-      - run: npm run build
-      - run: npm run lint
-      - run: npm run format
-      - name: "Run tests"
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format
+
+      - name: Run tests
         run: npm run test
-      - name: "Check for unstaged changes"
+
+      - name: Check for unstaged changes
+        run: |
+          git status --porcelain
+          git diff-index --quiet HEAD -- || exit 1
+
+  playwright-tools:
+    runs-on: ubuntu-latest
+    permissions:
+          contents: read
+          pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install dependencies
+        working-directory: tools/playwright
+        run: npm install
+
+      - name: Install Playwright browsers
+        working-directory: tools/playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Type check
+        working-directory: tools/playwright
+        run: npm run type-check
+
+      - name: Build
+        working-directory: tools/playwright
+        run: npm run build
+
+      - name: Lint
+        working-directory: tools/playwright
+        run: npm run lint
+
+      - name: Format check
+        working-directory: tools/playwright
+        run: npm run format
+
+      - name: Run tests
+        working-directory: tools/playwright
+        run: npm run test
+
+      - name: Check for unstaged changes
         run: |
           git status --porcelain
           git diff-index --quiet HEAD -- || exit 1
