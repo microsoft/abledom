@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 /blob-report/
 /playwright/.cache/
 /logs/
+
+# Debug logs
+codespace-telemetry-debug.log

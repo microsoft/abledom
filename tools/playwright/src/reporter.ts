@@ -23,6 +23,55 @@ export interface TestLocation {
 }
 
 /**
+ * A single accessibility issue found by AbleDOM.
+ */
+export interface AbleDOMIssue {
+  /**
+   * The rule ID that identified this issue.
+   */
+  id: string;
+  /**
+   * Human-readable description of the issue.
+   */
+  message: string;
+  /**
+   * The outerHTML of the element with the issue.
+   */
+  element?: string;
+  /**
+   * The outerHTML of the grandparent element (for context).
+   */
+  parentParent?: string;
+}
+
+/**
+ * Data attached when AbleDOM finds accessibility issues.
+ */
+export interface AbleDOMTestData {
+  type: "AbleDOM Issue";
+  /**
+   * File path where the issue was detected.
+   */
+  callerFile: string;
+  /**
+   * Line number in the test file.
+   */
+  callerLine: number;
+  /**
+   * Column number in the test file.
+   */
+  callerColumn: number;
+  /**
+   * Number of issues found.
+   */
+  issueCount: number;
+  /**
+   * The accessibility issues found.
+   */
+  issues: AbleDOMIssue[];
+}
+
+/**
  * A single entry in the accessibility report.
  */
 export interface ReportEntry {
@@ -30,7 +79,7 @@ export interface ReportEntry {
   testFile: string;
   testLine: number;
   testColumn: number;
-  data: unknown;
+  data: AbleDOMTestData;
   timestamp: string;
 }
 
@@ -42,6 +91,28 @@ export interface AbleDOMReporterOptions {
    * Output file path for the report. Defaults to './test-results/abledom.json'.
    */
   outputFile?: string;
+}
+
+/**
+ * The complete AbleDOM accessibility report structure.
+ */
+export interface AbleDOMReport {
+  /**
+   * ISO timestamp when the report was generated.
+   */
+  date: string;
+  /**
+   * Assertions where AbleDOM instance was properly exposed (exposeInstanceForTesting: true).
+   */
+  goodAssertions: TestLocation[];
+  /**
+   * Assertions where AbleDOM instance was NOT exposed (missing exposeInstanceForTesting: true).
+   */
+  badAssertions: TestLocation[];
+  /**
+   * Collected accessibility issues and test data.
+   */
+  records: ReportEntry[];
 }
 
 /**
@@ -86,7 +157,7 @@ export class AbleDOMReporter implements Reporter {
     testFile: string,
     testLine: number,
     testColumn: number,
-    data: unknown,
+    data: AbleDOMTestData,
   ): void {
     this.collectedData.push({
       testTitle,
@@ -122,7 +193,9 @@ export class AbleDOMReporter implements Reporter {
         }
       } else if (attachment.name === "abledom-test-data" && attachment.body) {
         try {
-          const data = JSON.parse(attachment.body.toString());
+          const data = JSON.parse(
+            attachment.body.toString(),
+          ) as AbleDOMTestData;
           this.addData(
             test.title,
             test.location.file,
@@ -131,14 +204,7 @@ export class AbleDOMReporter implements Reporter {
             data,
           );
         } catch {
-          // Not JSON data, store as-is
-          this.addData(
-            test.title,
-            test.location.file,
-            test.location.line,
-            test.location.column,
-            attachment.body.toString(),
-          );
+          // Ignore malformed test data
         }
       }
     });
@@ -149,7 +215,7 @@ export class AbleDOMReporter implements Reporter {
     // Write all collected data to a file
     const outputFilePath = path.resolve(process.cwd(), this.outputPath);
 
-    const report = {
+    const report: AbleDOMReport = {
       date: new Date().toISOString(),
       goodAssertions: this.goodAssertions,
       badAssertions: this.badAssertions,
