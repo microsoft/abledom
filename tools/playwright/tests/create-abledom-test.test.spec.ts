@@ -24,7 +24,7 @@ test.describe("createAbleDOMTest fixture", () => {
     await context.close();
   });
 
-  test("should set ableDOMInstanceForTestingNeeded flag after navigation", async ({
+  test("should call idle() when AbleDOM instance is exposed", async ({
     attachAbleDOM,
     browser,
   }) => {
@@ -40,26 +40,29 @@ test.describe("createAbleDOMTest fixture", () => {
     await attachAbleDOM(page);
 
     // Set up mock
+    let idleCalled = false;
     await page.evaluate(() => {
       const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
-        idle: async () => [],
+        idle: async () => {
+          (window as unknown as { __idleCalled: boolean }).__idleCalled = true;
+          return [];
+        },
         highlightElement: () => {
           /* noop */
         },
       };
     });
 
-    // Trigger an action - this will also set the flag via the patched waitFor
+    // Trigger an action
     await page.locator("button").waitFor();
 
-    // Check that the flag was set
-    const flagValue = await page.evaluate(() => {
-      return (window as WindowWithAbleDOMInstance)
-        .ableDOMInstanceForTestingNeeded;
+    // Check that idle was called
+    idleCalled = await page.evaluate(() => {
+      return (window as unknown as { __idleCalled: boolean }).__idleCalled;
     });
 
-    expect(flagValue).toBe(2);
+    expect(idleCalled).toBe(true);
 
     await context.close();
   });
@@ -150,30 +153,14 @@ test.describe("createAbleDOMTest fixture", () => {
       });
     }
 
-    // Trigger actions on both pages
+    // Trigger actions on both pages - should work without errors
     await page1.locator("#page1").waitFor();
     await page2.locator("#page2").waitFor();
-
-    // Both should have the flag set
-    const flag1 = await page1.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    const flag2 = await page2.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-
-    expect(flag1).toBe(2);
-    expect(flag2).toBe(2);
 
     await context.close();
   });
 
-  test("should persist flag across navigations via addInitScript", async ({
-    attachAbleDOM,
-    browser,
-  }) => {
+  test("should work across navigations", async ({ attachAbleDOM, browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -182,7 +169,7 @@ test.describe("createAbleDOMTest fixture", () => {
       'data:text/html,<html><body><div id="page1">Page 1</div></body></html>',
     );
 
-    // Attach AbleDOM - this will set flag immediately and add init script for future navigations
+    // Attach AbleDOM
     await attachAbleDOM(page);
 
     await page.evaluate(() => {
@@ -197,24 +184,10 @@ test.describe("createAbleDOMTest fixture", () => {
 
     await page.locator("#page1").waitFor();
 
-    const flag1 = await page.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    expect(flag1).toBe(2);
-
-    // Second navigation - flag should be set by addInitScript before page scripts run
+    // Second navigation
     await page.goto(
       'data:text/html,<html><body><div id="page2">Page 2</div></body></html>',
     );
-
-    // Check flag immediately after navigation (before setting up mock)
-    // The addInitScript should have already set it
-    const flag2BeforeMock = await page.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    expect(flag2BeforeMock).toBe(2);
 
     await page.evaluate(() => {
       const win = window as WindowWithAbleDOMInstance;
@@ -226,13 +199,8 @@ test.describe("createAbleDOMTest fixture", () => {
       };
     });
 
+    // Should work without errors
     await page.locator("#page2").waitFor();
-
-    const flag2 = await page.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    expect(flag2).toBe(2);
 
     await context.close();
   });

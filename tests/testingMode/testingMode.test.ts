@@ -6,18 +6,17 @@ import { test, expect } from "@playwright/test";
 import { loadTestPage, issueSelector } from "../utils";
 
 interface WindowWithAbleDOMInstance extends Window {
-  ableDOMInstanceForTestingNeeded?: number;
   ableDOMInstanceForTesting?: {
     idle: () => Promise<unknown[]>;
     highlightElement: (element: HTMLElement, scrollIntoView: boolean) => void;
   };
 }
 
-test.describe("Testing Mode Flag", () => {
-  test("mode 1 (headed) should expose instance and override headless to false", async ({
+test.describe("exposeInstanceForTesting prop", () => {
+  test("exposeInstanceForTesting: true with headless: false should expose instance and show UI", async ({
     page,
   }) => {
-    await loadTestPage(page, "tests/testingMode/testingMode-headed.html");
+    await loadTestPage(page, "tests/testingMode/exposed-with-ui.html");
 
     // Check that the instance is exposed
     const hasInstance = await page.evaluate(() => {
@@ -37,8 +36,7 @@ test.describe("Testing Mode Flag", () => {
     });
     expect(hasIdleMethod).toBe(true);
 
-    // Mode 1 should show UI (headless: false), so we should see the AbleDOM UI elements
-    // when there are issues. Let's create an issue by removing the button text.
+    // Create an issue by removing the button text
     await page.evaluate(() => {
       const btn = document.getElementById("button-1");
       if (btn) {
@@ -53,15 +51,15 @@ test.describe("Testing Mode Flag", () => {
       ).ableDOMInstanceForTesting?.idle();
     });
 
-    // In headed mode (headless: false), the UI should be visible
+    // With headless: false, the UI should be visible
     const issueCount = await page.$$(issueSelector);
     expect(issueCount.length).toBeGreaterThan(0);
   });
 
-  test("mode 2 (headless) should expose instance and override headless to true", async ({
+  test("exposeInstanceForTesting: true with headless: true should expose instance but hide UI", async ({
     page,
   }) => {
-    await loadTestPage(page, "tests/testingMode/testingMode-headless.html");
+    await loadTestPage(page, "tests/testingMode/exposed-headless.html");
 
     // Check that the instance is exposed
     const hasInstance = await page.evaluate(() => {
@@ -81,8 +79,7 @@ test.describe("Testing Mode Flag", () => {
     });
     expect(hasIdleMethod).toBe(true);
 
-    // Mode 2 should hide UI (headless: true), so we should NOT see UI elements
-    // even when there are issues.
+    // Create an issue by removing the button text
     await page.evaluate(() => {
       const btn = document.getElementById("button-1");
       if (btn) {
@@ -97,59 +94,17 @@ test.describe("Testing Mode Flag", () => {
       ).ableDOMInstanceForTesting?.idle();
     });
 
-    // In headless mode (headless: true), the UI should NOT be visible
+    // With headless: true, the UI should NOT be visible
     const issueCount = await page.$$(issueSelector);
     expect(issueCount.length).toBe(0);
   });
 
-  test("mode 3 (exact) should expose instance and preserve original headless prop", async ({
+  test("without exposeInstanceForTesting should NOT expose instance", async ({
     page,
   }) => {
-    await loadTestPage(page, "tests/testingMode/testingMode-exact.html");
+    await loadTestPage(page, "tests/testingMode/not-exposed.html");
 
-    // Check that the instance is exposed
-    const hasInstance = await page.evaluate(() => {
-      return (
-        typeof (window as WindowWithAbleDOMInstance)
-          .ableDOMInstanceForTesting !== "undefined"
-      );
-    });
-    expect(hasInstance).toBe(true);
-
-    // Check that the instance has the expected methods
-    const hasIdleMethod = await page.evaluate(() => {
-      return (
-        typeof (window as WindowWithAbleDOMInstance).ableDOMInstanceForTesting
-          ?.idle === "function"
-      );
-    });
-    expect(hasIdleMethod).toBe(true);
-
-    // Mode 3 should preserve the original headless prop (false in this test)
-    // So UI should be visible when there are issues.
-    await page.evaluate(() => {
-      const btn = document.getElementById("button-1");
-      if (btn) {
-        btn.innerText = "";
-      }
-    });
-
-    // Wait for AbleDOM to process
-    await page.evaluate(async () => {
-      await (
-        window as WindowWithAbleDOMInstance
-      ).ableDOMInstanceForTesting?.idle();
-    });
-
-    // With headless: false preserved, UI should be visible
-    const issueCount = await page.$$(issueSelector);
-    expect(issueCount.length).toBeGreaterThan(0);
-  });
-
-  test("no flag should NOT expose instance", async ({ page }) => {
-    await loadTestPage(page, "tests/testingMode/testingMode-none.html");
-
-    // Check that the instance is NOT exposed when no flag is set
+    // Check that the instance is NOT exposed
     const hasInstance = await page.evaluate(() => {
       return (
         typeof (window as WindowWithAbleDOMInstance)
@@ -160,7 +115,7 @@ test.describe("Testing Mode Flag", () => {
   });
 
   test("exposed instance idle() should return issues", async ({ page }) => {
-    await loadTestPage(page, "tests/testingMode/testingMode-headless.html");
+    await loadTestPage(page, "tests/testingMode/exposed-headless.html");
 
     // Create an issue
     await page.evaluate(() => {

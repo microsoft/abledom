@@ -4,7 +4,7 @@
  */
 
 import type { Page, Locator, TestInfo } from "@playwright/test";
-import type { AbleDOMTestingMode, WindowWithAbleDOMInstance } from "./types.js";
+import type { WindowWithAbleDOMInstance } from "./types.js";
 
 interface LocatorMonkeyPatchedWithAbleDOM extends Locator {
   __locatorIsMonkeyPatchedWithAbleDOM?: boolean;
@@ -70,7 +70,6 @@ function getCallerLocation(
  *
  * @param page - The Playwright Page object to attach methods to
  * @param testInfo - Optional TestInfo object for reporting issues to the custom reporter
- * @param mode - Testing mode: 1=headed (show UI), 2=headless (hide UI), 3=exact (use props as-is). Defaults to 2.
  *
  * @example
  * ```typescript
@@ -89,33 +88,12 @@ function getCallerLocation(
 export async function attachAbleDOMMethodsToPage(
   page: Page,
   testInfo?: TestInfo,
-  mode: AbleDOMTestingMode = 2,
 ): Promise<void> {
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
 
   // Store testInfo on the page object so each page has its own testInfo
   (page as unknown as Record<string, unknown>).__abledomTestInfo = testInfo;
-
-  // Add an init script to set the flag before any page scripts run on navigations
-  // This MUST be awaited to ensure it's registered before any navigation happens
-  await page.addInitScript((modeValue) => {
-    (
-      window as { ableDOMInstanceForTestingNeeded?: number }
-    ).ableDOMInstanceForTestingNeeded = modeValue;
-  }, mode);
-
-  // Also set the flag immediately on the current page context (in case the app is already loaded)
-  // Errors are caught silently since the page may be on about:blank or context may be invalid
-  await page
-    .evaluate((modeValue) => {
-      (
-        window as unknown as WindowWithAbleDOMInstance
-      ).ableDOMInstanceForTestingNeeded = modeValue;
-    }, mode)
-    .catch(() => {
-      /* ignore - addInitScript will set flag after navigation */
-    });
 
   let locatorProto: LocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;

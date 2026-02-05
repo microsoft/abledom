@@ -6,9 +6,10 @@
 import { AbleDOM, FocusableElementLabelRule } from "abledom";
 import { initIdleProp, getAbleDOMCallbacks } from "../utils";
 
-// Create AbleDOM with headless: true (should be overridden to false by mode 1)
+// Create AbleDOM with headless: false (show UI) and expose instance for testing
 const ableDOM = new AbleDOM(window, {
-  headless: true,
+  headless: false,
+  exposeInstanceForTesting: true,
   callbacks: getAbleDOMCallbacks(),
 });
 initIdleProp(ableDOM);

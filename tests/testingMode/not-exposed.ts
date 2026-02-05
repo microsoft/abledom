@@ -6,7 +6,7 @@
 import { AbleDOM, FocusableElementLabelRule } from "abledom";
 import { initIdleProp, getAbleDOMCallbacks } from "../utils";
 
-// Create AbleDOM without any testing mode flag
+// Create AbleDOM without exposing instance for testing
 const ableDOM = new AbleDOM(window, {
   headless: true,
   callbacks: getAbleDOMCallbacks(),

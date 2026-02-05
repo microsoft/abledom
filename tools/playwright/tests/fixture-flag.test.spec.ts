@@ -5,8 +5,8 @@
 import type { WindowWithAbleDOMInstance } from "../src/types.js";
 import { test, expect } from "./fixtures.js";
 
-test.describe("fixture flag setting", () => {
-  test("should set ableDOMInstanceForTestingNeeded flag on the page", async ({
+test.describe("fixture with exposeInstanceForTesting", () => {
+  test("should call idle() when AbleDOM instance is exposed via exposeInstanceForTesting prop", async ({
     page,
   }) => {
     // Navigate to a page
@@ -15,34 +15,32 @@ test.describe("fixture flag setting", () => {
     );
 
     // Set up a mock that tracks if idle() was called
+    let idleCalled = false;
     await page.evaluate(() => {
       const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
-        idle: async () => [],
+        idle: async () => {
+          (window as unknown as { __idleCalled: boolean }).__idleCalled = true;
+          return [];
+        },
         highlightElement: () => {
           /* noop */
         },
       };
     });
 
-    // Trigger an action that should set the flag
+    // Trigger an action
     await page.locator("button").waitFor();
 
-    // Check that the flag was set
-    const flagValue = await page.evaluate(() => {
-      return (window as WindowWithAbleDOMInstance)
-        .ableDOMInstanceForTestingNeeded;
+    // Check that idle was called
+    idleCalled = await page.evaluate(() => {
+      return (window as unknown as { __idleCalled: boolean }).__idleCalled;
     });
 
-    expect(flagValue).toBe(2);
+    expect(idleCalled).toBe(true);
   });
 
-  test("should set flag even when using fixture before navigation", async ({
-    page,
-  }) => {
-    // This test specifically tests the fixture pattern where attachAbleDOMMethodsToPage
-    // is called before any navigation happens
-
+  test("should work across multiple page navigations", async ({ page }) => {
     // Navigate to first page
     await page.goto(
       'data:text/html,<html><body><div id="page1">Page 1</div></body></html>',
@@ -62,13 +60,6 @@ test.describe("fixture flag setting", () => {
     // Trigger action
     await page.locator("#page1").waitFor();
 
-    // Check flag on first page
-    const flag1 = await page.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    expect(flag1).toBe(2);
-
     // Navigate to second page
     await page.goto(
       'data:text/html,<html><body><div id="page2">Page 2</div></body></html>',
@@ -85,14 +76,7 @@ test.describe("fixture flag setting", () => {
       };
     });
 
-    // Trigger action on second page
+    // Trigger action on second page - this should work without errors
     await page.locator("#page2").waitFor();
-
-    // Check flag on second page - this should also be true
-    const flag2 = await page.evaluate(
-      () =>
-        (window as WindowWithAbleDOMInstance).ableDOMInstanceForTestingNeeded,
-    );
-    expect(flag2).toBe(2);
   });
 });

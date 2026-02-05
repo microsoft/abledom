@@ -40,10 +40,14 @@ export interface AbleDOMProps {
     ): void;
     onIssueRemoved?(element: HTMLElement, rule: ValidationRule): void;
   };
+  // Expose the created AbleDOM instance as window.ableDOMInstanceForTesting,
+  // in order for abledom-playwright to be able to automatically grab notifications
+  // during the tests.
+  exposeInstanceForTesting?: boolean;
 }
 
 export class AbleDOM {
-  private _win: Window;
+  private _win: Window & { ableDOMInstanceForTesting?: AbleDOM };
   private _isDisposed = false;
   private _props: AbleDOMProps | undefined = undefined;
   private _observer: MutationObserver;
@@ -69,24 +73,8 @@ export class AbleDOM {
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
 
-    // Check if testing mode is requested via window flag
-    // 1 = headed (force headless=false), 2 = headless (force headless=true), 3 = exact (no override)
-    const testingMode = (
-      win as Window & { ableDOMInstanceForTestingNeeded?: number }
-    ).ableDOMInstanceForTestingNeeded;
-    if (testingMode === 1 || testingMode === 2 || testingMode === 3) {
-      // Expose the instance for testing
-      (
-        win as Window & { ableDOMInstanceForTesting?: AbleDOM }
-      ).ableDOMInstanceForTesting = this;
-
-      // Override headless prop based on mode
-      if (testingMode === 1) {
-        props = { ...props, headless: false };
-      } else if (testingMode === 2) {
-        props = { ...props, headless: true };
-      }
-      // testingMode === 3: use props as-is
+    if (props.exposeInstanceForTesting) {
+      this._win.ableDOMInstanceForTesting = this;
     }
 
     this._props = props;
