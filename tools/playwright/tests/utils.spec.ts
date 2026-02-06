@@ -56,4 +56,24 @@ test.describe("normalizeFilePath", () => {
   test("should handle empty string", () => {
     expect(normalizeFilePath("")).toBe("");
   });
+
+  test("should handle Windows path with webpack:\\ (backslash)", () => {
+    const input =
+      "D:\\a\\_work\\1\\a\\project\\tests\\webpack:\\package\\tests\\file.spec.ts";
+    const expected = "package/tests/file.spec.ts";
+    expect(normalizeFilePath(input)).toBe(expected);
+  });
+
+  test("should normalize backslashes to forward slashes in webpack paths", () => {
+    const input = "webpack:\\package\\src\\nested\\file.spec.ts";
+    const expected = "package/src/nested/file.spec.ts";
+    expect(normalizeFilePath(input)).toBe(expected);
+  });
+
+  test("should handle Windows CI path with webpack in the middle", () => {
+    const input =
+      "D:\\build\\agent\\project\\tests\\webpack:\\lib\\tests\\feature.spec.ts";
+    const expected = "lib/tests/feature.spec.ts";
+    expect(normalizeFilePath(input)).toBe(expected);
+  });
 });
