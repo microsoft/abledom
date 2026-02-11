@@ -7,6 +7,23 @@ import type { Page, Locator, TestInfo } from "@playwright/test";
 import type { WindowWithAbleDOMInstance } from "./types.js";
 import { normalizeFilePath } from "./utils.js";
 
+/**
+ * Options for AbleDOM idle() behavior.
+ */
+export interface AbleDOMIdleOptions {
+  /**
+   * Whether to mark returned issues as read so they won't be returned again.
+   * @default true
+   */
+  markAsRead?: boolean;
+  /**
+   * Timeout in milliseconds to wait for validation to complete.
+   * If validation doesn't complete within the timeout, returns null.
+   * @default 2000
+   */
+  timeout?: number;
+}
+
 interface LocatorMonkeyPatchedWithAbleDOM extends Locator {
   __locatorIsMonkeyPatchedWithAbleDOM?: boolean;
 }
@@ -75,6 +92,7 @@ function getCallerLocation(
  *
  * @param page - The Playwright Page object to attach methods to
  * @param testInfo - Optional TestInfo object for reporting issues to the custom reporter
+ * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 2000ms)
  *
  * @example
  * ```typescript
@@ -93,12 +111,16 @@ function getCallerLocation(
 export async function attachAbleDOMMethodsToPage(
   page: Page,
   testInfo?: TestInfo,
+  options: AbleDOMIdleOptions = {},
 ): Promise<void> {
+  const { markAsRead = true, timeout = 2000 } = options;
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
 
-  // Store testInfo on the page object so each page has its own testInfo
+  // Store testInfo and options on the page object so each page has its own config
   (page as unknown as Record<string, unknown>).__abledomTestInfo = testInfo;
+  (page as unknown as Record<string, unknown>).__abledomMarkAsRead = markAsRead;
+  (page as unknown as Record<string, unknown>).__abledomTimeout = timeout;
 
   let locatorProto: LocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;
@@ -128,28 +150,40 @@ export async function attachAbleDOMMethodsToPage(
       const ret = await origWaitFor.apply(this, args);
       const currentPage = this.page();
 
-      const result = await currentPage.evaluate(async () => {
-        const win = window as unknown as WindowWithAbleDOMInstance;
-        const hasInstance = !!win.ableDOMInstanceForTesting;
-        const issues = await win.ableDOMInstanceForTesting?.idle();
-        const el = issues?.[0]?.element;
+      // Get options from the page object
+      const pageMarkAsRead = (currentPage as unknown as Record<string, unknown>)
+        .__abledomMarkAsRead as boolean | undefined;
+      const pageTimeout = (currentPage as unknown as Record<string, unknown>)
+        .__abledomTimeout as number | undefined;
 
-        if (el) {
-          // TODO: Make highlighting flag-dependent.
-          // win.ableDOMInstanceForTesting?.highlightElement(el, true);
-        }
+      const result = await currentPage.evaluate(
+        async ({ markAsRead, timeout }) => {
+          const win = window as unknown as WindowWithAbleDOMInstance;
+          const hasInstance = !!win.ableDOMInstanceForTesting;
+          const issues = await win.ableDOMInstanceForTesting?.idle(
+            markAsRead,
+            timeout,
+          );
+          const el = issues?.[0]?.element;
 
-        return {
-          hasInstance,
-          issues: issues?.map((issue) => ({
-            id: issue.id,
-            message: issue.message,
-            element: issue.element?.outerHTML,
-            parentParent:
-              issue.element?.parentElement?.parentElement?.outerHTML,
-          })),
-        };
-      });
+          if (el) {
+            // TODO: Make highlighting flag-dependent.
+            // win.ableDOMInstanceForTesting?.highlightElement(el, true);
+          }
+
+          return {
+            hasInstance,
+            issues: issues?.map((issue) => ({
+              id: issue.id,
+              message: issue.message,
+              element: issue.element?.outerHTML,
+              parentParent:
+                issue.element?.parentElement?.parentElement?.outerHTML,
+            })),
+          };
+        },
+        { markAsRead: pageMarkAsRead, timeout: pageTimeout },
+      );
 
       const { hasInstance, issues } = result;
 

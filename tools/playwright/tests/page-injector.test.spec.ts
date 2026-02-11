@@ -259,6 +259,153 @@ test.describe("page-injector with mocked AbleDOM", () => {
   });
 });
 
+test.describe("idle options (markAsRead and timeout)", () => {
+  test("should pass markAsRead and timeout options to idle()", async ({
+    page,
+  }) => {
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Mock AbleDOM to capture the arguments passed to idle()
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleArgs: unknown[] }).__idleArgs = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleArgs: unknown[] }).__idleArgs.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    // Trigger an action - should use default options (markAsRead=true, timeout=2000)
+    await page.locator("button").waitFor();
+
+    // Verify the options were passed
+    const idleArgs = await page.evaluate(() => {
+      return (window as unknown as { __idleArgs: unknown[] }).__idleArgs;
+    });
+
+    expect(idleArgs.length).toBe(1);
+    expect(idleArgs[0]).toEqual({ markAsRead: true, timeout: 2000 });
+  });
+
+  test("should use default markAsRead=true and timeout=2000", async ({
+    page,
+  }) => {
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Track idle() calls and their arguments
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleCalls: unknown[] }).__idleCalls = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleCalls: unknown[] }).__idleCalls.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const calls = await page.evaluate(() => {
+      return (window as unknown as { __idleCalls: unknown[] }).__idleCalls;
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({ markAsRead: true, timeout: 2000 });
+  });
+
+  test("should handle null return from idle() when timeout expires", async ({
+    page,
+  }, testInfo) => {
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Mock AbleDOM to return null (simulating timeout expiration)
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      win.ableDOMInstanceForTesting = {
+        idle: async () => {
+          // Return null to simulate timeout
+          return null;
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    // This should not throw even when idle() returns null
+    await page.locator("button").waitFor();
+
+    // Verify no issues were reported (since null was returned)
+    const customDataAttachments = testInfo.attachments.filter(
+      (att) => att.name === "abledom-test-data",
+    );
+    expect(customDataAttachments.length).toBe(0);
+  });
+
+  test("markAsRead=true should cause subsequent idle() calls to receive same option", async ({
+    page,
+  }) => {
+    await page.goto(
+      "data:text/html,<html><body><button>B1</button><input/></body></html>",
+    );
+
+    // Track all idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __allIdleCalls: unknown[] }).__allIdleCalls = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (
+            window as unknown as { __allIdleCalls: unknown[] }
+          ).__allIdleCalls.push({ markAsRead, timeout });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    // Multiple actions should all pass the same options
+    await page.locator("button").waitFor();
+    await page.locator("input").waitFor();
+
+    const calls = await page.evaluate(() => {
+      return (window as unknown as { __allIdleCalls: unknown[] })
+        .__allIdleCalls;
+    });
+
+    expect(calls).toHaveLength(2);
+    // Both calls should have the same default options
+    expect(calls[0]).toEqual({ markAsRead: true, timeout: 2000 });
+    expect(calls[1]).toEqual({ markAsRead: true, timeout: 2000 });
+  });
+});
+
 // This test uses baseTest (without fixture) to test the case where testInfo is not provided
 baseTest("should work without testInfo parameter", async ({ page }) => {
   await page.goto(
@@ -292,4 +439,126 @@ baseTest("should work without testInfo parameter", async ({ page }) => {
 
   // Test passes - no errors thrown
   baseTest.expect(true).toBe(true);
+});
+
+baseTest.describe("custom idle options via attachAbleDOMMethodsToPage", () => {
+  baseTest(
+    "should pass custom markAsRead=false option",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button>Test</button></body></html>",
+      );
+
+      // Attach with custom options
+      await attachAbleDOMMethodsToPage(page, testInfo, { markAsRead: false });
+
+      // Track idle() calls
+      await page.evaluate(() => {
+        const win = window as WindowWithAbleDOMInstance;
+        (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+        win.ableDOMInstanceForTesting = {
+          idle: async (markAsRead?: boolean, timeout?: number) => {
+            (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+              markAsRead,
+              timeout,
+            });
+            return [];
+          },
+          highlightElement: () => {
+            /* noop */
+          },
+        };
+      });
+
+      await page.locator("button").waitFor();
+
+      const opts = await page.evaluate(() => {
+        return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+      });
+
+      baseTest.expect(opts).toHaveLength(1);
+      baseTest.expect(opts[0]).toEqual({ markAsRead: false, timeout: 2000 });
+    },
+  );
+
+  baseTest("should pass custom timeout option", async ({ page }, testInfo) => {
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Attach with custom timeout
+    await attachAbleDOMMethodsToPage(page, testInfo, { timeout: 5000 });
+
+    // Track idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const opts = await page.evaluate(() => {
+      return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+    });
+
+    baseTest.expect(opts).toHaveLength(1);
+    baseTest.expect(opts[0]).toEqual({ markAsRead: true, timeout: 5000 });
+  });
+
+  baseTest(
+    "should pass both custom markAsRead and timeout options",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button>Test</button></body></html>",
+      );
+
+      // Attach with both custom options
+      await attachAbleDOMMethodsToPage(page, testInfo, {
+        markAsRead: false,
+        timeout: 10000,
+      });
+
+      // Track idle() calls
+      await page.evaluate(() => {
+        const win = window as WindowWithAbleDOMInstance;
+        (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+        win.ableDOMInstanceForTesting = {
+          idle: async (markAsRead?: boolean, timeout?: number) => {
+            (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+              markAsRead,
+              timeout,
+            });
+            return [];
+          },
+          highlightElement: () => {
+            /* noop */
+          },
+        };
+      });
+
+      await page.locator("button").waitFor();
+
+      const opts = await page.evaluate(() => {
+        return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+      });
+
+      baseTest.expect(opts).toHaveLength(1);
+      baseTest.expect(opts[0]).toEqual({ markAsRead: false, timeout: 10000 });
+    },
+  );
 });

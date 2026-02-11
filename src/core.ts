@@ -69,6 +69,7 @@ export class AbleDOM {
     Map<ValidationRule, ValidationIssue>
   > = new Map();
   private _currentNotAnchoredIssues: ValidationIssue[] = [];
+  private _readIssues: WeakSet<ValidationIssue> = new Set();
 
   constructor(win: Window, props: AbleDOMProps = {}) {
     this._win = win;
@@ -545,34 +546,78 @@ export class AbleDOM {
     this._addIssue(rule, issue);
   };
 
-  private _getCurrentIssues(): ValidationIssue[] {
-    const issues = this._currentNotAnchoredIssues.slice(0);
+  private _getCurrentIssues(markAsRead: boolean): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+
+    this._currentNotAnchoredIssues.forEach((issue) => {
+      if (!this._readIssues.has(issue)) {
+        issues.push(issue);
+      }
+
+      if (markAsRead) {
+        this._readIssues.add(issue);
+      }
+    });
 
     this._currentAnchoredIssues.forEach((issueByRule) => {
       issueByRule.forEach((issue) => {
-        issues.push(issue);
+        if (!this._readIssues.has(issue)) {
+          issues.push(issue);
+        }
+
+        if (markAsRead) {
+          this._readIssues.add(issue);
+        }
       });
     });
 
     return issues;
   }
 
-  idle(): Promise<ValidationIssue[]> {
+  idle(
+    markAsRead?: boolean,
+    timeout?: number,
+  ): Promise<ValidationIssue[] | null> {
     if (!this._clearValidationTimeout) {
-      return Promise.resolve(this._getCurrentIssues());
+      return Promise.resolve(this._getCurrentIssues(!!markAsRead));
     }
+
+    let timeoutClear: (() => void) | undefined;
+    let timeoutResolve: (() => void) | undefined;
+    let timeoutPromise = timeout
+      ? new Promise<null>((resolve) => {
+          timeoutResolve = () => {
+            timeoutClear?.();
+            timeoutResolve = undefined;
+            resolve(null);
+          };
+
+          let timeoutTimer = this._win.setTimeout(() => {
+            timeoutClear = undefined;
+            timeoutResolve?.();
+          }, timeout);
+
+          timeoutClear = () => {
+            this._win.clearTimeout(timeoutTimer);
+            timeoutClear = undefined;
+          };
+        })
+      : undefined;
 
     if (!this._idlePromise) {
       this._idlePromise = new Promise((resolve) => {
         this._idleResolve = () => {
           delete this._idlePromise;
           delete this._idleResolve;
-          resolve(this._getCurrentIssues());
+          resolve(this._getCurrentIssues(!!markAsRead));
+          timeoutResolve?.();
         };
       });
     }
 
-    return this._idlePromise;
+    return timeoutPromise
+      ? Promise.race([this._idlePromise, timeoutPromise])
+      : this._idlePromise;
   }
 
   clearCurrentIssues(anchored = true, notAnchored = true): void {

@@ -4,6 +4,7 @@
  */
 
 export { attachAbleDOMMethodsToPage } from "./page-injector.js";
+export type { AbleDOMIdleOptions } from "./page-injector.js";
 export type { WindowWithAbleDOMInstance } from "./types.js";
 export {
   AbleDOMReporter,

@@ -14,6 +14,7 @@ import {
   TestInfo,
 } from "@playwright/test";
 import { attachAbleDOMMethodsToPage } from "./page-injector.js";
+import type { AbleDOMIdleOptions } from "./page-injector.js";
 
 /**
  * Fixtures provided by the AbleDOM test integration.
@@ -25,6 +26,7 @@ export interface AbleDOMFixtures {
    * IMPORTANT: This function is async and MUST be awaited before navigating the page.
    *
    * @param page - The Playwright Page object to attach AbleDOM to
+   * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 2000ms)
    *
    * @example
    * ```typescript
@@ -34,8 +36,10 @@ export interface AbleDOMFixtures {
    * // Now all locator actions on this page will trigger AbleDOM checks
    * ```
    */
-  attachAbleDOM: (page: Page) => Promise<void>;
+  attachAbleDOM: (page: Page, options?: AbleDOMIdleOptions) => Promise<void>;
 }
+
+export { AbleDOMIdleOptions };
 
 /**
  * Creates an AbleDOM test fixture that can be merged with other Playwright test fixtures.
@@ -89,9 +93,12 @@ export function createAbleDOMTest(): TestType<
 > {
   return base.extend<AbleDOMFixtures>({
     attachAbleDOM: async ({}, use, testInfo) => {
-      const attach = async (page: Page): Promise<void> => {
+      const attach = async (
+        page: Page,
+        options?: AbleDOMIdleOptions,
+      ): Promise<void> => {
         try {
-          await attachAbleDOMMethodsToPage(page, testInfo);
+          await attachAbleDOMMethodsToPage(page, testInfo, options);
           console.log("[AbleDOM] Attached to page.");
         } catch (error) {
           console.warn(`[AbleDOM] Failed to attach to page: ${error}`);
@@ -131,13 +138,13 @@ export function createAbleDOMTest(): TestType<
  * });
  * ```
  */
-export function createAbleDOMPageFixture() {
+export function createAbleDOMPageFixture(options?: AbleDOMIdleOptions) {
   return async (
     { page }: { page: Page },
     use: (page: Page) => Promise<void>,
     testInfo: TestInfo,
   ): Promise<void> => {
-    await attachAbleDOMMethodsToPage(page, testInfo);
+    await attachAbleDOMMethodsToPage(page, testInfo, options);
     await use(page);
   };
 }

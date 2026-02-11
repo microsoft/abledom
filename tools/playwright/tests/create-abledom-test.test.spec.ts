@@ -205,3 +205,182 @@ test.describe("createAbleDOMTest fixture", () => {
     await context.close();
   });
 });
+
+test.describe("attachAbleDOM with custom options", () => {
+  test("should accept markAsRead option", async ({
+    attachAbleDOM,
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Attach with markAsRead=false
+    await attachAbleDOM(page, { markAsRead: false });
+
+    // Track idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const opts = await page.evaluate(() => {
+      return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+    });
+
+    expect(opts).toHaveLength(1);
+    expect(opts[0]).toEqual({ markAsRead: false, timeout: 2000 });
+
+    await context.close();
+  });
+
+  test("should accept timeout option", async ({ attachAbleDOM, browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Attach with custom timeout
+    await attachAbleDOM(page, { timeout: 5000 });
+
+    // Track idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const opts = await page.evaluate(() => {
+      return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+    });
+
+    expect(opts).toHaveLength(1);
+    expect(opts[0]).toEqual({ markAsRead: true, timeout: 5000 });
+
+    await context.close();
+  });
+
+  test("should accept both markAsRead and timeout options", async ({
+    attachAbleDOM,
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Attach with both custom options
+    await attachAbleDOM(page, { markAsRead: false, timeout: 3000 });
+
+    // Track idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const opts = await page.evaluate(() => {
+      return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+    });
+
+    expect(opts).toHaveLength(1);
+    expect(opts[0]).toEqual({ markAsRead: false, timeout: 3000 });
+
+    await context.close();
+  });
+
+  test("should use defaults when no options provided", async ({
+    attachAbleDOM,
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(
+      "data:text/html,<html><body><button>Test</button></body></html>",
+    );
+
+    // Attach without options (should use defaults)
+    await attachAbleDOM(page);
+
+    // Track idle() calls
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      (window as unknown as { __idleOpts: unknown[] }).__idleOpts = [];
+
+      win.ableDOMInstanceForTesting = {
+        idle: async (markAsRead?: boolean, timeout?: number) => {
+          (window as unknown as { __idleOpts: unknown[] }).__idleOpts.push({
+            markAsRead,
+            timeout,
+          });
+          return [];
+        },
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    await page.locator("button").waitFor();
+
+    const opts = await page.evaluate(() => {
+      return (window as unknown as { __idleOpts: unknown[] }).__idleOpts;
+    });
+
+    expect(opts).toHaveLength(1);
+    expect(opts[0]).toEqual({ markAsRead: true, timeout: 2000 });
+
+    await context.close();
+  });
+});
