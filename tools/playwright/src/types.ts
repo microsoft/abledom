@@ -8,8 +8,11 @@
  */
 export interface WindowWithAbleDOMInstance extends Window {
   ableDOMInstanceForTesting?: {
-    idle: () => Promise<
-      { id: string; message: string; element: HTMLElement | null }[]
+    idle: (
+      markAsRead?: boolean,
+      timeout?: number,
+    ) => Promise<
+      { id: string; message: string; element: HTMLElement | null }[] | null
     >;
     highlightElement: (element: HTMLElement, scrollIntoView: boolean) => void;
   };

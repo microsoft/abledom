@@ -13,7 +13,7 @@ import { Page } from "@playwright/test";
 export const issueSelector = "#abledom-report .abledom-issue";
 
 interface WindowWithAbleDOMData extends Window {
-  __ableDOMIdle?: () => Promise<ValidationIssue[]>;
+  __ableDOMIdle?: typeof AbleDOM.prototype.idle;
   __ableDOMIssuesFromCallbacks?: Map<
     HTMLElement | null,
     Map<ValidationRule<ValidationIssue>, ValidationIssue>
