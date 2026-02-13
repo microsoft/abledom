@@ -1,30 +1,31 @@
 {
   "name": "abledom-playwright",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "AbleDOM tools for Playwright",
   "author": "Marat Abdullin <marata@microsoft.com>",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "require": "./dist/index.cjs"
     },
     "./reporter": {
       "types": "./dist/reporter.d.ts",
       "import": "./dist/reporter.js",
-      "default": "./dist/reporter.js"
+      "require": "./dist/reporter.cjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
     "clean": "rimraf dist .test-output test-results",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
@@ -32,7 +33,7 @@
     "lint:fix": "npm run lint -- --fix",
     "test": "playwright test --config=tests/playwright.config.ts",
     "type-check": "tsc --noEmit",
-    "prepublishOnly": "npm run lint && npm run format && npm run build"
+    "prepublishOnly": "npm run lint && npm run format && npm run build:check && npm run build"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.40.0"
@@ -49,6 +50,7 @@
     "globals": "^17.3.0",
     "prettier": "^3.8.1",
     "rimraf": "^6.1.2",
+    "tsup": "^8.5.0",
     "typescript": "^5.9.3"
   },
   "repository": {
