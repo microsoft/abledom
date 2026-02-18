@@ -235,7 +235,7 @@ export async function attachAbleDOMMethodsToPage(
 
     // Patch action methods to call our patched waitFor() before executing
     // This ensures all actions trigger AbleDOM checks
-    const actionsToPath = [
+    const actionsToPatch = [
       "click",
       "dblclick",
       "fill",
@@ -252,26 +252,46 @@ export async function attachAbleDOMMethodsToPage(
       "setInputFiles",
     ] as const;
 
-    for (const action of actionsToPath) {
+    // For all actions, options object (containing timeout) is always the last argument:
+    // - click(options?) - options is only/last arg
+    // - dblclick(options?) - options is only/last arg
+    // - fill(value, options?) - options is 2nd/last arg
+    // - type(text, options?) - options is 2nd/last arg
+    // - press(key, options?) - options is 2nd/last arg
+    // - check(options?) - options is only/last arg
+    // - uncheck(options?) - options is only/last arg
+    // - selectOption(values, options?) - options is 2nd/last arg
+    // - hover(options?) - options is only/last arg
+    // - tap(options?) - options is only/last arg
+    // - focus(options?) - options is only/last arg
+    // - blur(options?) - options is only/last arg
+    // - clear(options?) - options is only/last arg
+    // - setInputFiles(files, options?) - options is 2nd/last arg
+    type LocatorAction = (...args: unknown[]) => Promise<void>;
+    type LocatorProtoWithActions = Record<string, LocatorAction>;
+
+    for (const action of actionsToPatch) {
       const originalAction = (
-        locatorProto as unknown as Record<
-          string,
-          (...args: unknown[]) => Promise<unknown>
-        >
+        locatorProto as unknown as LocatorProtoWithActions
       )[action];
       if (originalAction) {
-        (
-          locatorProto as unknown as Record<
-            string,
-            (...args: unknown[]) => Promise<unknown>
-          >
-        )[action] = async function (this: Locator, ...args: unknown[]) {
-          // Call our patched waitFor first to trigger AbleDOM checks
-          // This will check accessibility before performing the action
-          await this.waitFor({ state: "attached" });
-          // Then perform the original action
-          return originalAction.apply(this, args);
-        };
+        (locatorProto as unknown as LocatorProtoWithActions)[action] =
+          async function (this: Locator, ...args: unknown[]) {
+            // Extract timeout from the last argument if it's an options object
+            const lastArg = args[args.length - 1];
+            const timeout =
+              lastArg &&
+              typeof lastArg === "object" &&
+              "timeout" in lastArg &&
+              typeof (lastArg as { timeout?: unknown }).timeout === "number"
+                ? (lastArg as { timeout: number }).timeout
+                : undefined;
+            // Call our patched waitFor first to trigger AbleDOM checks
+            // This will check accessibility before performing the action
+            await this.waitFor({ state: "attached", timeout });
+            // Then perform the original action
+            return originalAction.apply(this, args);
+          };
       }
     }
   }
