@@ -584,6 +584,7 @@ export class AbleDOM {
 
     let timeoutClear: (() => void) | undefined;
     let timeoutResolve: (() => void) | undefined;
+    let timedOut = false;
     let timeoutPromise = timeout
       ? new Promise<null>((resolve) => {
           timeoutResolve = () => {
@@ -594,6 +595,7 @@ export class AbleDOM {
 
           let timeoutTimer = this._win.setTimeout(() => {
             timeoutClear = undefined;
+            timedOut = true;
             timeoutResolve?.();
           }, timeout);
 
@@ -609,7 +611,7 @@ export class AbleDOM {
         this._idleResolve = () => {
           delete this._idlePromise;
           delete this._idleResolve;
-          resolve(this._getCurrentIssues(!!markAsRead));
+          resolve(this._getCurrentIssues(timedOut ? false : !!markAsRead));
           timeoutResolve?.();
         };
       });
