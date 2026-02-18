@@ -1,6 +1,6 @@
 {
   "name": "abledom",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "author": "Marat Abdullin <marata@microsoft.com>",
   "description": "Continuous detection of typical web application accessibility problems.",
   "license": "MIT",
