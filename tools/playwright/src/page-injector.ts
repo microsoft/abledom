@@ -141,14 +141,8 @@ export async function attachAbleDOMMethodsToPage(
   if (!locatorProto.__locatorIsMonkeyPatchedWithAbleDOM) {
     locatorProto.__locatorIsMonkeyPatchedWithAbleDOM = true;
 
-    const origWaitFor = locatorProto.waitFor;
-
-    locatorProto.waitFor = async function waitFor(
-      this: Locator,
-      ...args: Parameters<Locator["waitFor"]>
-    ) {
-      const ret = await origWaitFor.apply(this, args);
-      const currentPage = this.page();
+    const reportAbleDOMIssues = async (self: Locator) => {
+      const currentPage = self.page();
 
       // Get options from the page object
       const pageMarkAsRead = (currentPage as unknown as Record<string, unknown>)
@@ -229,7 +223,16 @@ export async function attachAbleDOMMethodsToPage(
         // Note: We don't throw an error here - just report the issues
         // This allows tests to continue and report all issues found
       }
+    };
 
+    const origWaitFor = locatorProto.waitFor;
+
+    locatorProto.waitFor = async function waitFor(
+      this: Locator,
+      ...args: Parameters<Locator["waitFor"]>
+    ) {
+      const ret = await origWaitFor.apply(this, args);
+      await reportAbleDOMIssues(this);
       return ret;
     };
 
@@ -252,21 +255,6 @@ export async function attachAbleDOMMethodsToPage(
       "setInputFiles",
     ] as const;
 
-    // For all actions, options object (containing timeout) is always the last argument:
-    // - click(options?) - options is only/last arg
-    // - dblclick(options?) - options is only/last arg
-    // - fill(value, options?) - options is 2nd/last arg
-    // - type(text, options?) - options is 2nd/last arg
-    // - press(key, options?) - options is 2nd/last arg
-    // - check(options?) - options is only/last arg
-    // - uncheck(options?) - options is only/last arg
-    // - selectOption(values, options?) - options is 2nd/last arg
-    // - hover(options?) - options is only/last arg
-    // - tap(options?) - options is only/last arg
-    // - focus(options?) - options is only/last arg
-    // - blur(options?) - options is only/last arg
-    // - clear(options?) - options is only/last arg
-    // - setInputFiles(files, options?) - options is 2nd/last arg
     type LocatorAction = (...args: unknown[]) => Promise<void>;
     type LocatorProtoWithActions = Record<string, LocatorAction>;
 
@@ -274,25 +262,13 @@ export async function attachAbleDOMMethodsToPage(
       const originalAction = (
         locatorProto as unknown as LocatorProtoWithActions
       )[action];
+
       if (originalAction) {
         (locatorProto as unknown as LocatorProtoWithActions)[action] =
           async function (this: Locator, ...args: unknown[]) {
-            // Extract timeout from the last argument if it's an options object
-            const lastArg = args[args.length - 1];
-            const timeout =
-              lastArg &&
-              typeof lastArg === "object" &&
-              "timeout" in lastArg &&
-              typeof (lastArg as { timeout?: unknown }).timeout === "number"
-                ? (lastArg as { timeout: number }).timeout
-                : undefined;
-            // Call our patched waitFor first to trigger AbleDOM checks
-            // This will check accessibility before performing the action
-            await this.waitFor({ state: "attached", timeout });
-            // Then perform the original action
-            // Note: Using Function.prototype.apply directly because Playwright's
-            // Locator class has its own 'apply' and 'call' methods
-            return Function.prototype.apply.call(originalAction, this, args);
+            const ret = await originalAction.apply(this, args);
+            await reportAbleDOMIssues(this);
+            return ret;
           };
       }
     }
