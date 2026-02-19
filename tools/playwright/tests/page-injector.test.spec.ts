@@ -538,6 +538,62 @@ test.describe("action timeout passthrough to waitFor", () => {
     expect(waitForCalls.length).toBeGreaterThan(0);
     expect(waitForCalls[0].timeout).toBeUndefined();
   });
+
+  test("should pass all arguments correctly to original action (fill)", async ({
+    page,
+  }) => {
+    await page.goto(
+      'data:text/html,<html><body><input type="text" id="test-input" /></body></html>',
+    );
+
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      win.ableDOMInstanceForTesting = {
+        idle: async () => [],
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    // Call fill with value and options - this tests that Function.prototype.apply.call
+    // correctly passes all arguments to the original action
+    await page.locator("#test-input").fill("test value", { timeout: 5000 });
+
+    // Verify the input was actually filled with the correct value
+    const inputValue = await page.locator("#test-input").inputValue();
+    expect(inputValue).toBe("test value");
+  });
+
+  test("should pass all arguments correctly to original action (selectOption)", async ({
+    page,
+  }) => {
+    await page.goto(
+      `data:text/html,<html><body>
+        <select id="test-select">
+          <option value="a">Option A</option>
+          <option value="b">Option B</option>
+        </select>
+      </body></html>`,
+    );
+
+    await page.evaluate(() => {
+      const win = window as WindowWithAbleDOMInstance;
+      win.ableDOMInstanceForTesting = {
+        idle: async () => [],
+        highlightElement: () => {
+          /* noop */
+        },
+      };
+    });
+
+    // Call selectOption with value and options
+    await page.locator("#test-select").selectOption("b", { timeout: 5000 });
+
+    // Verify the correct option was selected
+    const selectedValue = await page.locator("#test-select").inputValue();
+    expect(selectedValue).toBe("b");
+  });
 });
 
 baseTest.describe("custom idle options via attachAbleDOMMethodsToPage", () => {
