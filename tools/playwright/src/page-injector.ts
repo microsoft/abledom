@@ -290,7 +290,9 @@ export async function attachAbleDOMMethodsToPage(
             // This will check accessibility before performing the action
             await this.waitFor({ state: "attached", timeout });
             // Then perform the original action
-            return originalAction.apply(this, args);
+            // Note: Using Function.prototype.apply directly because Playwright's
+            // Locator class has its own 'apply' and 'call' methods
+            return Function.prototype.apply.call(originalAction, this, args);
           };
       }
     }
