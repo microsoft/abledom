@@ -1,6 +1,6 @@
 {
   "name": "abledom-playwright",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "AbleDOM tools for Playwright",
   "author": "Marat Abdullin <marata@microsoft.com>",
   "license": "MIT",
