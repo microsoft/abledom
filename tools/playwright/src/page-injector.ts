@@ -144,40 +144,69 @@ export async function attachAbleDOMMethodsToPage(
     const reportAbleDOMIssues = async (self: Locator) => {
       const currentPage = self.page();
 
+      // Skip if the page is already closed
+      if (currentPage.isClosed()) {
+        return;
+      }
+
       // Get options from the page object
       const pageMarkAsRead = (currentPage as unknown as Record<string, unknown>)
         .__abledomMarkAsRead as boolean | undefined;
       const pageTimeout = (currentPage as unknown as Record<string, unknown>)
         .__abledomTimeout as number | undefined;
 
-      const result = await currentPage.evaluate(
-        async ({ markAsRead, timeout }) => {
-          const win = window as unknown as WindowWithAbleDOMInstance;
-          const hasInstance = !!win.ableDOMInstanceForTesting;
-          const issues = await win.ableDOMInstanceForTesting?.idle(
-            markAsRead,
-            timeout,
-          );
-          const el = issues?.[0]?.element;
+      let result: {
+        hasInstance: boolean;
+        issues:
+          | {
+              id: string;
+              message: string;
+              element: string | undefined;
+              parentParent: string | undefined;
+            }[]
+          | undefined;
+      };
 
-          if (el) {
-            // TODO: Make highlighting flag-dependent.
-            // win.ableDOMInstanceForTesting?.highlightElement(el, true);
-          }
+      try {
+        result = await currentPage.evaluate(
+          async ({ markAsRead, timeout }) => {
+            const win = window as unknown as WindowWithAbleDOMInstance;
+            const hasInstance = !!win.ableDOMInstanceForTesting;
+            const issues = await win.ableDOMInstanceForTesting?.idle(
+              markAsRead,
+              timeout,
+            );
+            const el = issues?.[0]?.element;
 
-          return {
-            hasInstance,
-            issues: issues?.map((issue) => ({
-              id: issue.id,
-              message: issue.message,
-              element: issue.element?.outerHTML,
-              parentParent:
-                issue.element?.parentElement?.parentElement?.outerHTML,
-            })),
-          };
-        },
-        { markAsRead: pageMarkAsRead, timeout: pageTimeout },
-      );
+            if (el) {
+              // TODO: Make highlighting flag-dependent.
+              // win.ableDOMInstanceForTesting?.highlightElement(el, true);
+            }
+
+            return {
+              hasInstance,
+              issues: issues?.map((issue) => ({
+                id: issue.id,
+                message: issue.message,
+                element: issue.element?.outerHTML,
+                parentParent:
+                  issue.element?.parentElement?.parentElement?.outerHTML,
+              })),
+            };
+          },
+          { markAsRead: pageMarkAsRead, timeout: pageTimeout },
+        );
+      } catch (error) {
+        // Page may have been closed between the isClosed() check and evaluate()
+        // This can happen during test teardown or navigation
+        if (
+          error instanceof Error &&
+          error.message.includes("has been closed")
+        ) {
+          return;
+        }
+        throw error;
+      }
 
       const { hasInstance, issues } = result;
 
