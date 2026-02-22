@@ -26,7 +26,7 @@ export interface AbleDOMFixtures {
    * IMPORTANT: This function is async and MUST be awaited before navigating the page.
    *
    * @param page - The Playwright Page object to attach AbleDOM to
-   * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 2000ms)
+   * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 1000ms)
    *
    * @example
    * ```typescript
