@@ -247,7 +247,7 @@ test.describe("attachAbleDOM with custom options", () => {
     });
 
     expect(opts).toHaveLength(1);
-    expect(opts[0]).toEqual({ markAsRead: false, timeout: 2000 });
+    expect(opts[0]).toEqual({ markAsRead: false, timeout: 1000 });
 
     await context.close();
   });
@@ -379,7 +379,7 @@ test.describe("attachAbleDOM with custom options", () => {
     });
 
     expect(opts).toHaveLength(1);
-    expect(opts[0]).toEqual({ markAsRead: true, timeout: 2000 });
+    expect(opts[0]).toEqual({ markAsRead: true, timeout: 1000 });
 
     await context.close();
   });

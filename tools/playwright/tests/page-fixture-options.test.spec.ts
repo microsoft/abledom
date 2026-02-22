@@ -57,7 +57,7 @@ testWithMarkAsReadFalse.describe(
         });
 
         expect(opts).toHaveLength(1);
-        expect(opts[0]).toEqual({ markAsRead: false, timeout: 2000 });
+        expect(opts[0]).toEqual({ markAsRead: false, timeout: 1000 });
       },
     );
   },

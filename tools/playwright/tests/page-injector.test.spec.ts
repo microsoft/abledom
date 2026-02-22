@@ -286,7 +286,7 @@ test.describe("idle options (markAsRead and timeout)", () => {
       };
     });
 
-    // Trigger an action - should use default options (markAsRead=true, timeout=2000)
+    // Trigger an action - should use default options (markAsRead=true, timeout=1000)
     await page.locator("button").waitFor();
 
     // Verify the options were passed
@@ -295,10 +295,10 @@ test.describe("idle options (markAsRead and timeout)", () => {
     });
 
     expect(idleArgs.length).toBe(1);
-    expect(idleArgs[0]).toEqual({ markAsRead: true, timeout: 2000 });
+    expect(idleArgs[0]).toEqual({ markAsRead: true, timeout: 1000 });
   });
 
-  test("should use default markAsRead=true and timeout=2000", async ({
+  test("should use default markAsRead=true and timeout=1000", async ({
     page,
   }) => {
     await page.goto(
@@ -331,7 +331,7 @@ test.describe("idle options (markAsRead and timeout)", () => {
     });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual({ markAsRead: true, timeout: 2000 });
+    expect(calls[0]).toEqual({ markAsRead: true, timeout: 1000 });
   });
 
   test("should handle null return from idle() when timeout expires", async ({
@@ -401,8 +401,8 @@ test.describe("idle options (markAsRead and timeout)", () => {
 
     expect(calls).toHaveLength(2);
     // Both calls should have the same default options
-    expect(calls[0]).toEqual({ markAsRead: true, timeout: 2000 });
-    expect(calls[1]).toEqual({ markAsRead: true, timeout: 2000 });
+    expect(calls[0]).toEqual({ markAsRead: true, timeout: 1000 });
+    expect(calls[1]).toEqual({ markAsRead: true, timeout: 1000 });
   });
 });
 
@@ -660,7 +660,7 @@ baseTest.describe("custom idle options via attachAbleDOMMethodsToPage", () => {
       });
 
       baseTest.expect(opts).toHaveLength(1);
-      baseTest.expect(opts[0]).toEqual({ markAsRead: false, timeout: 2000 });
+      baseTest.expect(opts[0]).toEqual({ markAsRead: false, timeout: 1000 });
     },
   );
 

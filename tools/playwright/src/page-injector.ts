@@ -19,7 +19,7 @@ export interface AbleDOMIdleOptions {
   /**
    * Timeout in milliseconds to wait for validation to complete.
    * If validation doesn't complete within the timeout, returns null.
-   * @default 2000
+   * @default 1000
    */
   timeout?: number;
 }
@@ -92,7 +92,7 @@ function getCallerLocation(
  *
  * @param page - The Playwright Page object to attach methods to
  * @param testInfo - Optional TestInfo object for reporting issues to the custom reporter
- * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 2000ms)
+ * @param options - Optional idle options (markAsRead defaults to true, timeout defaults to 1000ms)
  *
  * @example
  * ```typescript
@@ -113,7 +113,7 @@ export async function attachAbleDOMMethodsToPage(
   testInfo?: TestInfo,
   options: AbleDOMIdleOptions = {},
 ): Promise<void> {
-  const { markAsRead = true, timeout = 2000 } = options;
+  const { markAsRead = true, timeout = 1000 } = options;
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
 
