@@ -302,7 +302,7 @@ export async function attachAbleDOMMethodsToPage(
         (locatorProto as unknown as LocatorProtoWithActions)[action] =
           async function (this: Locator, ...args: unknown[]) {
             const ret = await originalAction.apply(this, args);
-            await reportAbleDOMIssues(this, 0); // Overriding the timeout fo actions to avoid side effects.
+            await reportAbleDOMIssues(this, 0); // Setting the timeout for actions to 0 to avoid side effects.
             return ret;
           };
       }
