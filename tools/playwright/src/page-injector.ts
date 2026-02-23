@@ -141,7 +141,10 @@ export async function attachAbleDOMMethodsToPage(
   if (!locatorProto.__locatorIsMonkeyPatchedWithAbleDOM) {
     locatorProto.__locatorIsMonkeyPatchedWithAbleDOM = true;
 
-    const reportAbleDOMIssues = async (self: Locator) => {
+    const reportAbleDOMIssues = async (
+      self: Locator,
+      timeoutOverride?: number,
+    ) => {
       const currentPage = self.page();
 
       // Skip if the page is already closed
@@ -152,8 +155,11 @@ export async function attachAbleDOMMethodsToPage(
       // Get options from the page object
       const pageMarkAsRead = (currentPage as unknown as Record<string, unknown>)
         .__abledomMarkAsRead as boolean | undefined;
-      const pageTimeout = (currentPage as unknown as Record<string, unknown>)
-        .__abledomTimeout as number | undefined;
+      const pageTimeout =
+        timeoutOverride === undefined
+          ? ((currentPage as unknown as Record<string, unknown>)
+              .__abledomTimeout as number | undefined)
+          : timeoutOverride;
 
       let result: {
         hasInstance: boolean;
@@ -296,7 +302,7 @@ export async function attachAbleDOMMethodsToPage(
         (locatorProto as unknown as LocatorProtoWithActions)[action] =
           async function (this: Locator, ...args: unknown[]) {
             const ret = await originalAction.apply(this, args);
-            await reportAbleDOMIssues(this);
+            await reportAbleDOMIssues(this, 0); // Overriding the timeout fo actions to avoid side effects.
             return ret;
           };
       }
