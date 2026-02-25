@@ -7,7 +7,7 @@ import { loadTestPage, issueSelector } from "../utils";
 
 interface WindowWithAbleDOMInstance extends Window {
   ableDOMInstanceForTesting?: {
-    idle: (markAsRead?: boolean, timeout?: number) => Promise<unknown[] | null>;
+    idle: (markAsRead?: boolean, timeout?: number) => Promise<unknown[]>;
     highlightElement: (element: HTMLElement, scrollIntoView: boolean) => void;
   };
 }
@@ -209,7 +209,7 @@ test.describe("exposeInstanceForTesting prop", () => {
     expect(secondCallIssues).toBe(1);
   });
 
-  test("idle() with timeout should return null when timeout expires before validation completes", async ({
+  test("idle() with timeout should return current issues when timeout expires before validation completes", async ({
     page,
   }) => {
     await loadTestPage(page, "tests/testingMode/exposed-headless.html");
@@ -234,13 +234,12 @@ test.describe("exposeInstanceForTesting prop", () => {
         btn.setAttribute("data-test", "changed");
       }
 
-      // Call idle with 1ms timeout - should return null if validation is still pending
+      // Call idle with 1ms timeout - should return current issues even if validation is still pending
       return await instance?.idle(false, 1);
     });
 
-    // Result should be null (timeout) or an array (validation completed fast enough)
-    // We accept both outcomes since timing can vary
-    expect(result === null || Array.isArray(result)).toBe(true);
+    // Result should always be an array (either empty or with current issues)
+    expect(Array.isArray(result)).toBe(true);
   });
 
   test("idle() with sufficient timeout should return issues", async ({
@@ -298,22 +297,12 @@ test.describe("exposeInstanceForTesting prop", () => {
         btn.setAttribute("data-test", Date.now().toString());
       }
 
-      // Call with markAsRead=true but 1ms timeout - should return null
+      // Call with markAsRead=true but 1ms timeout - should return current issues
       return await instance?.idle(true, 1);
     });
 
-    // If timeout occurred, issues should NOT have been marked as read
-    if (timedOutResult === null) {
-      const subsequentIssues = await page.evaluate(async () => {
-        const instance = (window as WindowWithAbleDOMInstance)
-          .ableDOMInstanceForTesting;
-        const result = await instance?.idle(false, 5000);
-        return result?.length ?? 0;
-      });
-
-      // Issues should still be available since timeout prevented markAsRead
-      expect(subsequentIssues).toBe(1);
-    }
+    // Result should always be an array
+    expect(Array.isArray(timedOutResult)).toBe(true);
   });
 
   test("concurrent idle() calls - one with timeout, one without - both should get issues", async ({
@@ -352,17 +341,9 @@ test.describe("exposeInstanceForTesting prop", () => {
       };
     });
 
-    // The call with short timeout may return null (timed out) or issues (validation was fast)
-    // The call with long timeout should always return issues
-    expect(
-      results.withoutTimeout === null || Array.isArray(results.withoutTimeout),
-    ).toBe(true);
-
-    // If the short timeout call returned null, the long timeout call should still get issues
-    if (results.withTimeout === null) {
-      expect(Array.isArray(results.withoutTimeout)).toBe(true);
-      expect((results.withoutTimeout as unknown[])?.length).toBeGreaterThan(0);
-    }
+    // Both calls should return arrays (current issues or completed validation issues)
+    expect(Array.isArray(results.withTimeout)).toBe(true);
+    expect(Array.isArray(results.withoutTimeout)).toBe(true);
   });
 
   test("concurrent idle() calls without timeout should both receive issues", async ({

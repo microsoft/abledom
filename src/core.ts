@@ -574,10 +574,7 @@ export class AbleDOM {
     return issues;
   }
 
-  idle(
-    markAsRead?: boolean,
-    timeout?: number,
-  ): Promise<ValidationIssue[] | null> {
+  idle(markAsRead?: boolean, timeout?: number): Promise<ValidationIssue[]> {
     if (!this._clearValidationTimeout) {
       return Promise.resolve(this._getCurrentIssues(!!markAsRead));
     }
@@ -586,11 +583,10 @@ export class AbleDOM {
     let timeoutResolve: (() => void) | undefined;
     let timedOut = false;
     let timeoutPromise = timeout
-      ? new Promise<null>((resolve) => {
+      ? new Promise<ValidationIssue[]>((resolve) => {
           timeoutResolve = () => {
             timeoutClear?.();
-            timeoutResolve = undefined;
-            resolve(null);
+            resolve(this._getCurrentIssues(!!markAsRead));
           };
 
           let timeoutTimer = this._win.setTimeout(() => {
@@ -601,6 +597,7 @@ export class AbleDOM {
 
           timeoutClear = () => {
             this._win.clearTimeout(timeoutTimer);
+            timeoutResolve = undefined;
             timeoutClear = undefined;
           };
         })
@@ -612,7 +609,7 @@ export class AbleDOM {
           delete this._idlePromise;
           delete this._idleResolve;
           resolve(this._getCurrentIssues(timedOut ? false : !!markAsRead));
-          timeoutResolve?.();
+          timeoutClear?.();
         };
       });
     }

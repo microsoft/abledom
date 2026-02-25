@@ -18,7 +18,7 @@ export interface AbleDOMIdleOptions {
   markAsRead?: boolean;
   /**
    * Timeout in milliseconds to wait for validation to complete.
-   * If validation doesn't complete within the timeout, returns null.
+   * If validation doesn't complete within the timeout, returns the current issues.
    * @default 1000
    */
   timeout?: number;
@@ -302,7 +302,9 @@ export async function attachAbleDOMMethodsToPage(
         (locatorProto as unknown as LocatorProtoWithActions)[action] =
           async function (this: Locator, ...args: unknown[]) {
             const ret = await originalAction.apply(this, args);
-            await reportAbleDOMIssues(this, 0); // Setting the timeout for actions to 0 to avoid side effects.
+            await reportAbleDOMIssues(this, 1); // 0 would block idle() till it's resolved,
+            // default timeout will give side effects in a form of timeouts,
+            // so, we're adding just a little bit of asynchronosity.
             return ret;
           };
       }

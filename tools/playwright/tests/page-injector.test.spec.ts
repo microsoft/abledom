@@ -334,20 +334,20 @@ test.describe("idle options (markAsRead and timeout)", () => {
     expect(calls[0]).toEqual({ markAsRead: true, timeout: 1000 });
   });
 
-  test("should handle null return from idle() when timeout expires", async ({
+  test("should handle empty array return from idle() when timeout expires", async ({
     page,
   }, testInfo) => {
     await page.goto(
       "data:text/html,<html><body><button>Test</button></body></html>",
     );
 
-    // Mock AbleDOM to return null (simulating timeout expiration)
+    // Mock AbleDOM to return empty array (simulating timeout with no current issues)
     await page.evaluate(() => {
       const win = window as WindowWithAbleDOMInstance;
       win.ableDOMInstanceForTesting = {
         idle: async () => {
-          // Return null to simulate timeout
-          return null;
+          // Return empty array to simulate timeout with no current issues
+          return [];
         },
         highlightElement: () => {
           /* noop */
@@ -355,10 +355,10 @@ test.describe("idle options (markAsRead and timeout)", () => {
       };
     });
 
-    // This should not throw even when idle() returns null
+    // This should not throw even when idle() returns empty array
     await page.locator("button").waitFor();
 
-    // Verify no issues were reported (since null was returned)
+    // Verify no issues were reported (since empty array was returned)
     const customDataAttachments = testInfo.attachments.filter(
       (att) => att.name === "abledom-test-data",
     );
