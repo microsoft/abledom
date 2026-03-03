@@ -369,6 +369,7 @@ export class IssuesUI {
   private _issuesContainer: HTMLElement | undefined;
   private _toggleButton: HTMLElement | undefined;
   private _toggleButtonCount: HTMLElement | undefined;
+  private _alignmentBar: HTMLElement | undefined;
 
   private _isMuted = false;
   private _issues: Set<IssueUI> = new Set();
@@ -428,6 +429,9 @@ export class IssuesUI {
           };
         },
       )
+      .openTag("span", { class: "abledom-floating-label" })
+      .text("Issues")
+      .closeTag()
       .openTag("span", { class: "abledom-floating-counter" }, (span) => {
         this._toggleButtonCount = span;
         span.textContent = "0";
@@ -435,7 +439,174 @@ export class IssuesUI {
       .closeTag()
       .closeTag();
 
+    // Corner alignment controls (child of toggle button, shown on hover)
+    const alignmentBar = doc.createElement(
+      "div",
+    ) as HTMLElementWithAbleDOMUIFlag;
+    alignmentBar.__abledomui = true;
+    alignmentBar.className = "abledom-alignment-bar";
+    // Stop clicks on alignment bar from toggling issues
+    alignmentBar.onclick = (e) => e.stopPropagation();
+
+    const corners: Array<{
+      svg: typeof svgAlignBottomRight;
+      pos: UIAlignments;
+      title: string;
+    }> = [
+      {
+        svg: svgAlignTopLeft,
+        pos: UIAlignments.TopLeft,
+        title: "Move to top-left",
+      },
+      {
+        svg: svgAlignTopRight,
+        pos: UIAlignments.TopRight,
+        title: "Move to top-right",
+      },
+      {
+        svg: svgAlignBottomLeft,
+        pos: UIAlignments.BottomLeft,
+        title: "Move to bottom-left",
+      },
+      {
+        svg: svgAlignBottomRight,
+        pos: UIAlignments.BottomRight,
+        title: "Move to bottom-right",
+      },
+    ];
+
+    const alignBtns: HTMLElement[] = [];
+
+    for (const corner of corners) {
+      const btn = doc.createElement("button") as HTMLElementWithAbleDOMUIFlag;
+      btn.__abledomui = true;
+      btn.className = "abledom-align-btn";
+      btn.title = corner.title;
+      // @ts-expect-error built svg function
+      corner.svg(btn);
+
+      if (corner.pos === UIAlignments.BottomRight) {
+        btn.classList.add("active");
+      }
+
+      btn.onclick = () => {
+        alignBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        this._setAlignment(corner.pos);
+      };
+
+      alignBtns.push(btn);
+      alignmentBar.appendChild(btn);
+    }
+
+    this._alignmentBar = alignmentBar;
+    // Append alignment bar inside the toggle button
+    if (this._toggleButton) {
+      this._toggleButton.appendChild(alignmentBar);
+    }
+
     doc.body.appendChild(container);
+  }
+
+  private _setAlignment(pos: UIAlignments) {
+    const btn = this._toggleButton;
+    const bar = this._alignmentBar;
+    const container = this._container;
+    const listContainer = this._issuesContainer;
+
+    if (!btn || !container) return;
+
+    // Reset positions
+    btn.style.top = "auto";
+    btn.style.bottom = "auto";
+    btn.style.left = "auto";
+    btn.style.right = "auto";
+    if (container) {
+      container.style.top = "auto";
+      container.style.bottom = "auto";
+      container.style.left = "auto";
+      container.style.right = "auto";
+      container.style.flexDirection = "column";
+      container.style.justifyContent = "flex-end";
+      container.style.alignItems = "flex-end";
+    }
+    if (listContainer) {
+      listContainer.style.marginBottom = "";
+      listContainer.style.marginTop = "";
+    }
+    // Flip alignment bar to the opposite side of the screen edge
+    if (bar) {
+      bar.style.left = "";
+      bar.style.right = "";
+    }
+
+    switch (pos) {
+      case UIAlignments.BottomRight:
+        btn.style.bottom = "24px";
+        btn.style.right = "24px";
+        if (bar) {
+          bar.style.right = "calc(100% + 8px)";
+          bar.style.left = "auto";
+        }
+        if (container) {
+          container.style.bottom = "24px";
+          container.style.right = "24px";
+          container.style.justifyContent = "flex-end";
+          container.style.alignItems = "flex-end";
+        }
+        if (listContainer) listContainer.style.marginBottom = "76px";
+        break;
+      case UIAlignments.BottomLeft:
+        btn.style.bottom = "24px";
+        btn.style.left = "24px";
+        if (bar) {
+          bar.style.left = "calc(100% + 8px)";
+          bar.style.right = "auto";
+        }
+        if (container) {
+          container.style.bottom = "24px";
+          container.style.left = "24px";
+          container.style.alignItems = "flex-start";
+        }
+        if (listContainer) listContainer.style.marginBottom = "76px";
+        break;
+      case UIAlignments.TopRight:
+        btn.style.top = "24px";
+        btn.style.right = "24px";
+        if (bar) {
+          bar.style.right = "calc(100% + 8px)";
+          bar.style.left = "auto";
+        }
+        if (container) {
+          container.style.top = "24px";
+          container.style.right = "24px";
+          container.style.justifyContent = "flex-start";
+          container.style.alignItems = "flex-end";
+        }
+        if (listContainer) {
+          listContainer.style.marginTop = "76px";
+          listContainer.style.marginBottom = "0";
+        }
+        break;
+      case UIAlignments.TopLeft:
+        btn.style.top = "24px";
+        btn.style.left = "24px";
+        if (bar) {
+          bar.style.left = "calc(100% + 8px)";
+          bar.style.right = "auto";
+        }
+        if (container) {
+          container.style.top = "24px";
+          container.style.left = "24px";
+          container.style.justifyContent = "flex-start";
+          container.style.alignItems = "flex-start";
+        }
+        if (listContainer) {
+          listContainer.style.marginTop = "76px";
+          listContainer.style.marginBottom = "0";
+        }
+        break;
+    }
   }
 
   toggleIssuesVisibility() {
@@ -590,6 +761,7 @@ export class IssuesUI {
     delete this._issuesContainer;
     delete this._toggleButton;
     delete this._toggleButtonCount;
+    delete this._alignmentBar;
   }
 }
 
