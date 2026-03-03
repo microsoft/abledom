@@ -27,6 +27,10 @@ import svgLog from "./log.svg?raw";
 import svgReveal from "./reveal.svg?raw";
 // @ts-expect-error parsed assets
 import svgBugReport from "./bug.svg?raw";
+// @ts-expect-error parsed assets
+import svgCopy from "./copy.svg?raw";
+// @ts-expect-error parsed assets
+import svgChevron from "./chevron.svg?raw";
 
 // @ts-expect-error parsed assets
 import svgHideAll from "./hideall.svg?raw";
@@ -93,6 +97,10 @@ export class IssueUI {
     return instance._wrapper;
   }
 
+  get rule(): ValidationRule {
+    return this._rule;
+  }
+
   isHidden = false;
 
   constructor(
@@ -145,15 +153,27 @@ export class IssueUI {
               : ""
         }`,
       })
+      .openTag("div", { class: "abledom-issue-message" })
+      .text(issue.message)
+      .closeTag()
+      .openTag("div", { class: "abledom-issue-actions" })
       .openTag(
         "button",
         {
-          class: "button",
+          class: "button abledom-button-log",
+          type: "button",
           title: "Log to Console",
         },
         (logButton) => {
-          logButton.onclick = () => {
+          logButton.onclick = (e) => {
+            e.stopPropagation();
             const { id, message, element, rel, help, ...extra } = issue;
+
+            console.log(
+              "%cAbleDOM Issue:",
+              "font-weight: bold; color: #d32f2f",
+              issue,
+            );
 
             this._core.log(
               "AbleDOM: ",
@@ -175,41 +195,26 @@ export class IssueUI {
       .openTag(
         "button",
         {
-          class: "button",
-          // title: "Reveal in Elements panel",
+          class: "button abledom-button-reveal",
+          type: "button",
           title: "Scroll element into view",
         },
         (revealButton: HTMLElement) => {
           const element = issue.element;
 
           if (element) {
-            revealButton.onclick = () => {
+            revealButton.onclick = (e) => {
+              e.stopPropagation();
+              element.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "center",
+              });
               this._issuesUI?.highlight(element, true);
             };
           } else {
             revealButton.style.display = "none";
           }
-          // const body = win.document.body;
-          // const hasDevTools =
-          //   !!(win as WindowWithAbleDOMDevtools).__ableDOMDevtools
-          //     ?.revealElement && false; // Temtorarily disabling the devtools plugin integration.
-
-          // if (hasDevTools && element && body.contains(element)) {
-          //   revealButton.onclick = () => {
-          //     const revealElement = (win as WindowWithAbleDOMDevtools)
-          //       .__ableDOMDevtools?.revealElement;
-
-          //     if (revealElement && body.contains(element)) {
-          //       revealElement(element).then((revealed: boolean) => {
-          //         if (!revealed) {
-          //           // TODO
-          //         }
-          //       });
-          //     }
-          //   };
-          // } else {
-          //   revealButton.style.display = "none";
-          // }
         },
       )
       .element(svgReveal)
@@ -217,7 +222,8 @@ export class IssueUI {
       .openTag(
         "button",
         {
-          class: "button",
+          class: "button abledom-button-bug",
+          type: "button",
           title: "Report bug",
         },
         (bugReportButton) => {
@@ -230,7 +236,8 @@ export class IssueUI {
               bugReportButton.title = title;
             }
 
-            bugReportButton.onclick = () => {
+            bugReportButton.onclick = (e) => {
+              e.stopPropagation();
               bugReport.onClick(issue);
             };
           } else {
@@ -240,16 +247,61 @@ export class IssueUI {
       )
       .element(svgBugReport)
       .closeTag()
-      .text(issue.message)
+      .openTag(
+        "button",
+        {
+          class: "button abledom-button-copy",
+          type: "button",
+          title: "Copy AI Prompt",
+        },
+        (copyButton) => {
+          copyButton.onclick = (e) => {
+            e.stopPropagation();
+            const { id, message, element, help } = issue;
+            const elementHtml = element?.outerHTML || "N/A";
+            const prompt = `Fix the following accessibility issue:
+Rule ID: ${id}
+Message: ${message}
+Help Link: ${help || "N/A"}
+Element HTML:
+\`\`\`html
+${elementHtml}
+\`\`\``;
+
+            navigator.clipboard
+              .writeText(prompt)
+              .then(() => {
+                console.log(
+                  "%cPrompt copied to clipboard!",
+                  "color: green; font-weight: bold;",
+                );
+                // Optional: temporarily change icon or show tooltip
+                const originalTitle = copyButton.title;
+                copyButton.title = "Copied!";
+                setTimeout(() => {
+                  copyButton.title = originalTitle;
+                }, 2000);
+              })
+              .catch((err) => {
+                console.error("Failed to copy prompt: ", err);
+              });
+          };
+        },
+      )
+      .element(svgCopy)
+      .closeTag()
       .openTag(
         "a",
         {
-          class: "button close",
+          class: "button close abledom-button-help",
           href: issue.help || "/",
           title: "Open help",
           target: "_blank",
         },
         (help) => {
+          help.onclick = (e) => {
+            e.stopPropagation();
+          };
           if (!issue.help) {
             help.style.display = "none";
           }
@@ -260,17 +312,20 @@ export class IssueUI {
       .openTag(
         "button",
         {
-          class: "button close",
+          class: "button close abledom-button-hide",
+          type: "button",
           title: "Hide",
         },
         (closeButton) => {
-          closeButton.onclick = () => {
+          closeButton.onclick = (e) => {
+            e.stopPropagation();
             this.toggle(false);
             this._issuesUI?.highlight(null);
           };
         },
       )
       .element(svgClose)
+      .closeTag()
       .closeTag()
       .closeTag()
       .closeTag();
@@ -301,21 +356,25 @@ export class IssueUI {
   }
 }
 
+interface IssueGroup {
+  header: HTMLElementWithAbleDOMUIFlag;
+  content: HTMLElementWithAbleDOMUIFlag;
+  countElement: HTMLElementWithAbleDOMUIFlag;
+  count: number;
+}
+
 export class IssuesUI {
   private _win: Window | undefined;
   private _container: HTMLElement | undefined;
   private _issuesContainer: HTMLElement | undefined;
-  private _menuElement: HTMLElement | undefined;
-  private _issueCountElement: HTMLSpanElement | undefined;
-  private _showAllButton: HTMLElement | undefined;
-  private _hideAllButton: HTMLElement | undefined;
-  private _alignBottomLeftButton: HTMLElement | undefined;
-  private _alignTopLeftButton: HTMLElement | undefined;
-  private _alignTopRightButton: HTMLElement | undefined;
-  private _alignBottomRightButton: HTMLElement | undefined;
+  private _toggleButton: HTMLElement | undefined;
+  private _toggleButtonCount: HTMLElement | undefined;
 
   private _isMuted = false;
   private _issues: Set<IssueUI> = new Set();
+  private _areIssuesVisible = false;
+
+  private _groups: Map<string, IssueGroup> = new Map();
 
   private _getHighlighter?: () => ElementHighlighter | undefined;
 
@@ -352,242 +411,113 @@ export class IssuesUI {
       doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
     issuesContainer.__abledomui = true;
     issuesContainer.className = "abledom-issues-container";
+    issuesContainer.style.display = "none";
     container.appendChild(issuesContainer);
 
-    const menuElement = (this._menuElement =
-      doc.createElement("div")) as HTMLElementWithAbleDOMUIFlag;
-    menuElement.__abledomui = true;
-    menuElement.className = "abledom-menu-container";
-    container.appendChild(menuElement);
-
-    new DOMBuilder(menuElement)
-      .openTag("div", { class: "abledom-menu" })
+    new DOMBuilder(container)
       .openTag(
-        "span",
+        "div",
         {
-          class: "issues-count",
-          title: "Number of issues",
+          class: "abledom-floating-button",
+          title: "Toggle issues visibility",
         },
-        (issueCountElement) => {
-          this._issueCountElement = issueCountElement;
-        },
-      )
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button",
-          title: "Show all issues",
-        },
-        (showAllButton) => {
-          this._showAllButton = showAllButton;
-
-          showAllButton.onclick = () => {
-            this.showAll();
+        (toggleButton) => {
+          this._toggleButton = toggleButton;
+          toggleButton.onclick = () => {
+            this.toggleIssuesVisibility();
           };
         },
       )
-      .element(svgShowAll)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button",
-          title: "Hide all issues",
-        },
-        (hideAllButton) => {
-          this._hideAllButton = hideAllButton;
-
-          hideAllButton.onclick = () => {
-            this.hideAll();
-          };
-        },
-      )
-      .element(svgHideAll)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button",
-          title: "Mute newly appearing issues",
-        },
-        (muteButton) => {
-          muteButton.onclick = () => {
-            const isMuted = (this._isMuted =
-              muteButton.classList.toggle(pressedClass));
-
-            if (isMuted) {
-              muteButton.setAttribute("title", "Unmute newly appearing issues");
-            } else {
-              muteButton.setAttribute("title", "Mute newly appearing issues");
-            }
-          };
-        },
-      )
-      .element(svgMuteAll)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button align-button align-button-first pressed",
-          title: "Attach issues to bottom left",
-        },
-        (alignBottomLeftButton) => {
-          this._alignBottomLeftButton = alignBottomLeftButton;
-
-          alignBottomLeftButton.onclick = () => {
-            this.setUIAlignment(UIAlignments.BottomLeft);
-          };
-        },
-      )
-      .element(svgAlignBottomLeft)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button align-button",
-          title: "Attach issues to top left",
-        },
-        (alignTopLeftButton) => {
-          this._alignTopLeftButton = alignTopLeftButton;
-
-          alignTopLeftButton.onclick = () => {
-            this.setUIAlignment(UIAlignments.TopLeft);
-          };
-        },
-      )
-      .element(svgAlignTopLeft)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button align-button",
-          title: "Attach issues to top right",
-        },
-        (alignTopRightButton) => {
-          this._alignTopRightButton = alignTopRightButton;
-
-          alignTopRightButton.onclick = () => {
-            this.setUIAlignment(UIAlignments.TopRight);
-          };
-        },
-      )
-      .element(svgAlignTopRight)
-      .closeTag()
-      .openTag(
-        "button",
-        {
-          class: "button align-button align-button-last",
-          title: "Attach issues to bottom right",
-        },
-        (alignBottomRightButton) => {
-          this._alignBottomRightButton = alignBottomRightButton;
-
-          alignBottomRightButton.onclick = () => {
-            this.setUIAlignment(UIAlignments.BottomRight);
-          };
-        },
-      )
-      .element(svgAlignBottomRight)
+      .openTag("span", { class: "abledom-floating-counter" }, (span) => {
+        this._toggleButtonCount = span;
+        span.textContent = "0";
+      })
       .closeTag()
       .closeTag();
 
     doc.body.appendChild(container);
   }
 
-  private setUIAlignment(alignment: UIAlignments) {
-    if (!this._container || !this._issuesContainer || !this._menuElement) {
-      return;
+  toggleIssuesVisibility() {
+    this._areIssuesVisible = !this._areIssuesVisible;
+    if (this._issuesContainer) {
+      this._issuesContainer.style.display = this._areIssuesVisible
+        ? "flex" // Using flex for column layout
+        : "none";
     }
-
-    this._alignBottomLeftButton?.classList.remove(pressedClass);
-    this._alignBottomRightButton?.classList.remove(pressedClass);
-    this._alignTopLeftButton?.classList.remove(pressedClass);
-    this._alignTopRightButton?.classList.remove(pressedClass);
-
-    this._container.classList.remove(
-      "abledom-align-left",
-      "abledom-align-right",
-      "abledom-align-top",
-      "abledom-align-bottom",
-    );
-    let containerClasses: string[] = [];
-    let issuesFirst = false;
-
-    switch (alignment) {
-      case UIAlignments.BottomLeft:
-        containerClasses = ["abledom-align-left", "abledom-align-bottom"];
-        issuesFirst = true;
-        this._alignBottomLeftButton?.classList.add(pressedClass);
-        break;
-      case UIAlignments.BottomRight:
-        containerClasses = ["abledom-align-right", "abledom-align-bottom"];
-        issuesFirst = true;
-        this._alignBottomRightButton?.classList.add(pressedClass);
-        break;
-      case UIAlignments.TopLeft:
-        containerClasses = ["abledom-align-left", "abledom-align-top"];
-        this._alignTopLeftButton?.classList.add(pressedClass);
-        break;
-      case UIAlignments.TopRight:
-        containerClasses = ["abledom-align-right", "abledom-align-top"];
-        this._alignTopRightButton?.classList.add(pressedClass);
-        break;
+    if (this._toggleButton) {
+      if (this._areIssuesVisible) {
+        this._toggleButton.classList.add("active");
+      } else {
+        this._toggleButton.classList.remove("active");
+      }
     }
-
-    this._container.classList.add(...containerClasses);
-    this._container.insertBefore(
-      this._issuesContainer,
-      issuesFirst ? this._menuElement : null,
-    );
   }
 
   private _setIssuesCount(count: number) {
-    if (!this._menuElement) {
-      return;
+    if (this._toggleButtonCount) {
+      this._toggleButtonCount.textContent = `${count}`;
     }
 
-    const countElement = this._issueCountElement;
-
-    if (countElement && count > 0) {
-      countElement.textContent = "";
-      new DOMBuilder(countElement)
-        .openTag("strong")
-        .text(`${count}`)
-        .closeTag()
-        .text(` issue${count > 1 ? "s" : ""}`);
-
-      this._menuElement.style.display = "block";
-    } else {
-      this._menuElement.style.display = "none";
+    if (this._container) {
+      this._container.style.display = count > 0 ? "block" : "none";
     }
   }
 
-  private _setShowHideButtonsVisibility() {
-    const showAllButton = this._showAllButton;
-    const hideAllButton = this._hideAllButton;
-
-    if (!showAllButton || !hideAllButton) {
-      return;
+  private _getOrCreateGroup(ruleName: string): IssueGroup {
+    if (this._groups.has(ruleName)) {
+      return this._groups.get(ruleName)!;
     }
 
-    let allHidden = true;
-    let allVisible = true;
+    const doc = this._win?.document;
+    if (!doc) throw new Error("Document not found");
 
-    for (let issue of this._issues) {
-      if (issue.isHidden) {
-        allVisible = false;
-      } else {
-        allHidden = false;
-      }
+    const header = doc.createElement("div") as HTMLElementWithAbleDOMUIFlag;
+    header.__abledomui = true;
+    header.className = "abledom-group-header";
 
-      if (!allHidden && !allVisible) {
-        break;
-      }
+    const content = doc.createElement("div") as HTMLElementWithAbleDOMUIFlag;
+    content.__abledomui = true;
+    content.className = "abledom-group-content";
+
+    const countElement = doc.createElement("span");
+    countElement.className = "abledom-group-count";
+    countElement.textContent = "0";
+
+    const chevronWrapper = doc.createElement("div");
+    chevronWrapper.className = "chevron";
+    // @ts-expect-error built svg function
+    svgChevron(chevronWrapper);
+
+    const title = doc.createElement("div");
+    title.className = "abledom-group-title";
+    title.appendChild(chevronWrapper);
+    const titleText = doc.createElement("span");
+    titleText.textContent = ruleName;
+    title.appendChild(titleText);
+
+    header.appendChild(title);
+    header.appendChild(countElement);
+
+    header.onclick = () => {
+      const isExpanded = header.classList.toggle("expanded");
+      content.classList.toggle("expanded", isExpanded);
+    };
+
+    if (this._issuesContainer) {
+      this._issuesContainer.appendChild(header);
+      this._issuesContainer.appendChild(content);
     }
 
-    hideAllButton.style.display = allHidden ? "none" : "block";
-    showAllButton.style.display = allVisible ? "none" : "block";
+    const group: IssueGroup = {
+      header,
+      content,
+      countElement: countElement as HTMLElementWithAbleDOMUIFlag,
+      count: 0,
+    };
+    this._groups.set(ruleName, group);
+
+    return group;
   }
 
   addIssue(issue: IssueUI) {
@@ -605,19 +535,17 @@ export class IssuesUI {
       throw new Error("IssuesUI is not initialized");
     }
 
-    if (this._isMuted) {
-      issue.toggle(false, true);
-    }
+    // Always show the issue in the list (if not muted logic requires otherwise, but simpler is better)
+    issue.toggle(true, true);
+
+    const group = this._getOrCreateGroup(issue.rule.name);
+    group.count++;
+    group.countElement.textContent = `${group.count}`;
 
     const issueUIWraper = IssueUI.getElement(issue);
-    issueUIWraper && this._issuesContainer.appendChild(issueUIWraper);
-
-    IssueUI.setOnToggle(issue, () => {
-      this._setShowHideButtonsVisibility();
-    });
+    issueUIWraper && group.content.appendChild(issueUIWraper);
 
     this._setIssuesCount(this._issues.size);
-    this._setShowHideButtonsVisibility();
   }
 
   removeIssue(issue: IssueUI) {
@@ -627,23 +555,23 @@ export class IssuesUI {
 
     this._issues.delete(issue);
 
+    if (!this.headless) {
+      const ruleName = issue.rule.name;
+      if (this._groups.has(ruleName)) {
+        const group = this._groups.get(ruleName)!;
+        group.count--;
+        group.countElement.textContent = `${group.count}`;
+
+        if (group.count <= 0) {
+          group.header.remove();
+          group.content.remove();
+          this._groups.delete(ruleName);
+        }
+      }
+    }
+
     this._setIssuesCount(this._issues.size);
-    this._setShowHideButtonsVisibility();
     this.highlight(null);
-  }
-
-  hideAll() {
-    this._issues.forEach((issue) => {
-      issue.toggle(false);
-    });
-    this._setShowHideButtonsVisibility();
-  }
-
-  showAll() {
-    this._issues.forEach((issue) => {
-      issue.toggle(true);
-    });
-    this._setShowHideButtonsVisibility();
   }
 
   highlight(
@@ -660,14 +588,8 @@ export class IssuesUI {
     delete this._getHighlighter;
     delete this._container;
     delete this._issuesContainer;
-    delete this._menuElement;
-    delete this._issueCountElement;
-    delete this._showAllButton;
-    delete this._hideAllButton;
-    delete this._alignBottomLeftButton;
-    delete this._alignTopLeftButton;
-    delete this._alignTopRightButton;
-    delete this._alignBottomRightButton;
+    delete this._toggleButton;
+    delete this._toggleButtonCount;
   }
 }
 

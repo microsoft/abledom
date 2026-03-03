@@ -1,174 +1,256 @@
 #abledom-report {
-  bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  left: 10px;
-  max-height: 80%;
-  max-width: 60%;
-  padding: 4px 8px;
+  bottom: 24px;
+  right: 24px;
   position: fixed;
   z-index: 100500;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  display: flex;
+  flex-direction: column; /* Items stack top-to-bottom: List then Button */
+  justify-content: flex-end; /* Push content to the bottom of the container */
+  align-items: flex-end; /* Align items to the right */
+  pointer-events: none; /* Let clicks pass through empty space */
+  width: auto;
+  max-width: 100%;
+  max-height: 90vh; /* Allow list to take up height but not overflow screen */
+  height: auto;
 }
 
-#abledom-report :focus-visible {
-  outline: 3px solid red;
-  mix-blend-mode: difference;
-}
-
-#abledom-report.abledom-align-left {
-  left: 10px;
-  right: auto;
-}
-
-#abledom-report.abledom-align-right {
-  left: auto;
-  right: 10px;
-}
-
-#abledom-report.abledom-align-bottom {
-  bottom: 20px;
-  top: auto;
-}
-
-#abledom-report.abledom-align-top {
-  /* flex-direction: column-reverse; */
-  bottom: auto;
-  top: 10px;
-}
-
-.abledom-menu-container {
-  backdrop-filter: blur(3px);
-  border-radius: 8px;
-  box-shadow: 0px 0px 4px rgba(127, 127, 127, 0.5);
-  display: inline-block;
-  margin: 2px auto 2px 0;
-}
-
-#abledom-report.abledom-align-right .abledom-menu-container {
-  margin: 2px 0 2px auto;
-}
-
-.abledom-menu {
-  background-color: rgba(140, 10, 121, 0.7);
-  border-radius: 8px;
-  color: white;
-  display: inline flex;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 16px;
-  line-height: 26px;
-  padding: 4px;
-}
-
-.abledom-menu .issues-count {
-  margin: 0 8px;
-  display: inline-block;
-}
-
-.abledom-menu .button {
-  all: unset;
-  color: #000;
-  cursor: pointer;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(200, 200, 200, 1) 100%
-  );
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+#abledom-report * {
+  pointer-events: auto; /* Re-enable pointer events on children */
   box-sizing: border-box;
-  line-height: 0px;
-  margin-right: 4px;
-  max-height: 26px;
-  padding: 2px;
-  text-decoration: none;
 }
 
-.abledom-menu .align-button {
-  border-right-color: rgba(0, 0, 0, 0.4);
-  border-radius: 0;
-  margin: 0;
+.abledom-floating-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background-color: #2c2c2c;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s;
+  color: white;
+  user-select: none;
+  /* Fixed positioning to prevent movement */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100501; /* Ensure it's above the list container if they overlap */
 }
 
-.abledom-menu .align-button:active,
-#abledom-report .pressed {
-  background: linear-gradient(
-    180deg,
-    rgba(130, 130, 130, 1) 0%,
-    rgba(180, 180, 180, 1) 100%
-  );
-}
-
-.abledom-menu .align-button-first {
-  border-top-left-radius: 6px;
-  border-bottom-left-radius: 6px;
-  margin-left: 8px;
-}
-.abledom-menu .align-button-last {
-  border-top-right-radius: 6px;
-  border-bottom-right-radius: 6px;
-  border-right-color: rgba(255, 255, 255, 0.4);
-}
-
+/* Ensure no margin on the list interfering with layout */
 .abledom-issues-container {
-  overflow: auto;
-  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Push list up to avoid overlapping the fixed button */
+  margin-bottom: 76px; /* 56px button + 20px gap */
+  max-height: calc(90vh - 100px);
+  overflow-y: auto;
+  width: 320px;
+  padding-right: 4px; /* Space for scrollbar */
 }
 
-#abledom-report.abledom-align-right .abledom-issues-container {
-  text-align: right;
+/* Scrollbar styling */
+.abledom-issues-container::-webkit-scrollbar {
+  width: 4px;
+}
+.abledom-issues-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 
 .abledom-issue-container {
-  backdrop-filter: blur(3px);
-  border-radius: 8px;
-  box-shadow: 0px 0px 4px rgba(127, 127, 127, 0.5);
-  display: inline-flex;
-  margin: 2px 0;
+  /* Replaces existing style */
+  display: flex;
+  width: 100%;
 }
 
 .abledom-issue {
-  background-color: rgba(164, 2, 2, 0.7);
+  background: white;
   border-radius: 8px;
-  color: white;
-  display: inline flex;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 16px;
-  line-height: 26px;
-  padding: 4px;
-}
-.abledom-issue_warning {
-  background-color: rgba(163, 82, 1, 0.7);
-}
-.abledom-issue_info {
-  background-color: rgba(0, 0, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #333;
+  border-left: 4px solid #d32f2f; /* Default warning color */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.2s;
 }
 
+.abledom-issue_warning {
+  border-left-color: #f57c00;
+}
+.abledom-issue_info {
+  border-left-color: #1976d2;
+}
+
+/* Button base styles */
 .abledom-issue .button {
-  all: unset;
-  color: #000;
+  background: none;
+  border: none;
   cursor: pointer;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(200, 200, 200, 1) 100%
-  );
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-sizing: border-box;
-  line-height: 0px;
-  margin-right: 4px;
-  max-height: 26px;
-  padding: 2px;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #757575;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    transform 0.15s;
   text-decoration: none;
+  line-height: 1;
 }
 
 .abledom-issue .button:hover {
-  opacity: 0.7;
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
-.abledom-issue .button.close {
-  background: none;
-  border-color: transparent;
-  color: #fff;
-  margin: 0;
+.abledom-issue .button svg {
+  width: 18px; /* Slightly larger */
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+}
+
+/* Button-specific styling */
+.abledom-issue .abledom-button-log:hover {
+  color: #5c6bc0; /* Indigo */
+  background-color: rgba(92, 107, 192, 0.1);
+}
+
+.abledom-issue .abledom-button-reveal:hover {
+  color: #ef6c00; /* Deep Orange */
+  background-color: rgba(239, 108, 0, 0.1);
+}
+
+.abledom-issue .abledom-button-bug:hover {
+  color: #d32f2f; /* Red */
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+.abledom-issue .abledom-button-copy:hover {
+  color: #8e24aa; /* Purple */
+  background-color: rgba(142, 36, 170, 0.1);
+}
+
+.abledom-issue .abledom-button-help:hover {
+  color: #0288d1; /* Light Blue */
+  background-color: rgba(2, 136, 209, 0.1);
+}
+
+.abledom-issue .abledom-button-hide:hover {
+  color: #424242; /* Darker Gray */
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure SVG stroke/fill is handled correctly based on the SVG content */
+.abledom-issue .button svg circle,
+.abledom-issue .button svg line,
+.abledom-issue .button svg path,
+.abledom-issue .button svg polyline,
+.abledom-issue .button svg ellipse {
+  /* Let inherited properties work */
+}
+
+/* Layout for actions inside issue card */
+.abledom-issue-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+}
+
+.abledom-issue-message {
+  margin-bottom: 4px;
+}
+
+/* Group Headers */
+.abledom-group-header {
+  border-bottom: 1px solid #ddd;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  user-select: none;
+  font-size: 14px;
+  color: #333;
+  margin-top: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.abledom-group-header:first-child {
+  margin-top: 0;
+}
+
+.abledom-group-header:hover {
+  background: #ececec;
+}
+
+.abledom-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.abledom-group-content {
+  display: none;
+  margin-top: 8px;
+  flex-direction: column;
+  gap: 8px; /* Maintain gap between cards */
+  padding-bottom: 4px; /* Slight bottom padding */
+}
+
+.abledom-group-content.expanded {
+  display: flex;
+}
+
+.abledom-group-count {
+  background: #4c4c4c;
+  color: #fbfdff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #757575;
+}
+
+.chevron svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.abledom-group-header.expanded .chevron {
+  transform: rotate(90deg);
 }
