@@ -28,7 +28,7 @@ import svgReveal from "./reveal.svg?raw";
 // @ts-expect-error parsed assets
 import svgBugReport from "./bug.svg?raw";
 // @ts-expect-error parsed assets
-import svgCopy from "./copy.svg?raw";
+import svgSparkles from "./sparkles.svg?raw";
 // @ts-expect-error parsed assets
 import svgChevron from "./chevron.svg?raw";
 
@@ -288,7 +288,7 @@ ${elementHtml}
           };
         },
       )
-      .element(svgCopy)
+      .element(svgSparkles)
       .closeTag()
       .openTag(
         "a",
