@@ -71,8 +71,6 @@ enum UIAlignments {
   TopRight = "top-right",
 }
 
-const pressedClass = "pressed";
-
 // interface WindowWithAbleDOMDevtools extends Window {
 //   __ableDOMDevtools?: {
 //     revealElement?: (element: HTMLElement) => Promise<boolean>;
@@ -371,7 +369,6 @@ export class IssuesUI {
   private _toggleButtonCount: HTMLElement | undefined;
   private _alignmentBar: HTMLElement | undefined;
 
-  private _isMuted = false;
   private _issues: Set<IssueUI> = new Set();
   private _areIssuesVisible = false;
 
@@ -482,7 +479,6 @@ export class IssuesUI {
       btn.__abledomui = true;
       btn.className = "abledom-align-btn";
       btn.title = corner.title;
-      // @ts-expect-error built svg function
       corner.svg(btn);
 
       if (corner.pos === UIAlignments.BottomRight) {
@@ -657,7 +653,6 @@ export class IssuesUI {
 
     const chevronWrapper = doc.createElement("div");
     chevronWrapper.className = "chevron";
-    // @ts-expect-error built svg function
     svgChevron(chevronWrapper);
 
     const title = doc.createElement("div");
