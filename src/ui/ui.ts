@@ -768,7 +768,10 @@ export class IssuesUI {
 export class ElementHighlighter {
   private _window: Window | undefined;
   private _container: HTMLElementWithAbleDOMUIFlag | undefined;
+  private _overlay: HTMLElementWithAbleDOMUIFlag | undefined;
   private _element: HTMLElement | undefined;
+  private _previousZIndex: string | undefined;
+  private _previousPosition: string | undefined;
   private _cancelScrollTimer: (() => void) | undefined;
   private _intersectionObserver: IntersectionObserver | undefined;
   private _cancelAutoHideTimer: (() => void) | undefined;
@@ -793,6 +796,12 @@ export class ElementHighlighter {
       .openTag("div", { class: "abledom-highlight-border2" })
       .closeTag();
 
+    const overlay: HTMLElementWithAbleDOMUIFlag =
+      win.document.createElement("div");
+    overlay.__abledomui = true;
+    overlay.className = "abledom-dimming-overlay";
+    this._overlay = overlay;
+
     win.addEventListener("scroll", this._onScroll, true);
   }
 
@@ -806,6 +815,7 @@ export class ElementHighlighter {
     }
 
     if (!element) {
+      this._restoreElementStyle();
       delete this._element;
       this._unobserve();
       this._hide();
@@ -819,7 +829,15 @@ export class ElementHighlighter {
       return;
     }
 
+    this._restoreElementStyle();
     this._element = element;
+
+    this._previousZIndex = element.style.zIndex;
+    this._previousPosition = element.style.position;
+    element.style.zIndex = "100499";
+    if (!element.style.position || element.style.position === "static") {
+      element.style.position = "relative";
+    }
 
     if (scrollIntoView) {
       element.scrollIntoView({ block: "center" });
@@ -858,6 +876,13 @@ export class ElementHighlighter {
         style.left = `${rect.left}px`;
 
         container.style.display = "block";
+
+        if (this._overlay) {
+          if (!this._overlay.parentElement) {
+            win.document.body.appendChild(this._overlay);
+          }
+          this._overlay.classList.add("visible");
+        }
       }
     });
 
@@ -865,18 +890,32 @@ export class ElementHighlighter {
   }
 
   dispose() {
+    this._restoreElementStyle();
     this._unobserve();
     this._cancelScrollTimer?.();
     this._cancelAutoHideTimer?.();
     this._window?.removeEventListener("scroll", this._onScroll, true);
     this._container?.remove();
+    this._overlay?.remove();
     delete this._element;
     delete this._container;
+    delete this._overlay;
     delete this._window;
   }
 
   private _hide() {
     this._container && (this._container.style.display = "none");
+    this._overlay?.classList.remove("visible");
+  }
+
+  private _restoreElementStyle() {
+    const el = this._element;
+    if (el) {
+      el.style.zIndex = this._previousZIndex ?? "";
+      el.style.position = this._previousPosition ?? "";
+      delete this._previousZIndex;
+      delete this._previousPosition;
+    }
   }
 
   private _unobserve() {
