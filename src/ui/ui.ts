@@ -31,13 +31,6 @@ import svgBugReport from "./bug.svg?raw";
 import svgSparkles from "./sparkles.svg?raw";
 // @ts-expect-error parsed assets
 import svgChevron from "./chevron.svg?raw";
-
-// @ts-expect-error parsed assets
-import svgHideAll from "./hideall.svg?raw";
-// @ts-expect-error parsed assets
-import svgMuteAll from "./muteall.svg?raw";
-// @ts-expect-error parsed assets
-import svgShowAll from "./showall.svg?raw";
 // @ts-expect-error parsed assets
 import svgAlignTopLeft from "./aligntopleft.svg?raw";
 // @ts-expect-error parsed assets
@@ -510,7 +503,9 @@ export class IssuesUI {
     const container = this._container;
     const listContainer = this._issuesContainer;
 
-    if (!btn || !container) return;
+    if (!btn || !container) {
+      return;
+    }
 
     // Reset positions
     btn.style.top = "auto";
@@ -550,7 +545,9 @@ export class IssuesUI {
           container.style.justifyContent = "flex-end";
           container.style.alignItems = "flex-end";
         }
-        if (listContainer) listContainer.style.marginBottom = "76px";
+        if (listContainer) {
+          listContainer.style.marginBottom = "76px";
+        }
         break;
       case UIAlignments.BottomLeft:
         btn.style.bottom = "24px";
@@ -564,7 +561,9 @@ export class IssuesUI {
           container.style.left = "24px";
           container.style.alignItems = "flex-start";
         }
-        if (listContainer) listContainer.style.marginBottom = "76px";
+        if (listContainer) {
+          listContainer.style.marginBottom = "76px";
+        }
         break;
       case UIAlignments.TopRight:
         btn.style.top = "24px";
@@ -637,7 +636,9 @@ export class IssuesUI {
     }
 
     const doc = this._win?.document;
-    if (!doc) throw new Error("Document not found");
+    if (!doc) {
+      throw new Error("Document not found");
+    }
 
     const header = doc.createElement("div") as HTMLElementWithAbleDOMUIFlag;
     header.__abledomui = true;
