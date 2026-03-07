@@ -42,6 +42,7 @@
   "homepage": "https://github.com/microsoft/abledom#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.1",
+    "@tony.ganchev/eslint-plugin-header": "^3.2.4",
     "@types/node": "^25.2.1",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
@@ -50,7 +51,6 @@
     "esbuild-plugin-inline-import": "^1.1.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-import": "^2.32.0",
     "playwright": "^1.58.1",
     "prettier": "^3.8.1",
