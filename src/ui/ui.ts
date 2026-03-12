@@ -32,6 +32,8 @@ import svgSparkles from "./sparkles.svg?raw";
 // @ts-expect-error parsed assets
 import svgChevron from "./chevron.svg?raw";
 // @ts-expect-error parsed assets
+import svgShowAll from "./showall.svg?raw";
+// @ts-expect-error parsed assets
 import svgAlignTopLeft from "./aligntopleft.svg?raw";
 // @ts-expect-error parsed assets
 import svgAlignTopRight from "./aligntopright.svg?raw";
@@ -350,6 +352,8 @@ ${elementHtml}
     }
 
     this._wrapper.style.display = show ? "block" : "none";
+
+    this._issuesUI?.updateRestoreButton(this._rule.name);
   }
 
   dispose() {
@@ -363,6 +367,7 @@ interface IssueGroup {
   header: HTMLElementWithAbleDOMUIFlag;
   content: HTMLElementWithAbleDOMUIFlag;
   countElement: HTMLElementWithAbleDOMUIFlag;
+  restoreButton: HTMLElementWithAbleDOMUIFlag;
   count: number;
 }
 
@@ -675,8 +680,27 @@ export class IssuesUI {
     titleText.textContent = ruleName;
     title.appendChild(titleText);
 
+    const restoreButton = doc.createElement(
+      "button",
+    ) as HTMLElementWithAbleDOMUIFlag;
+    restoreButton.__abledomui = true;
+    restoreButton.className = "abledom-group-restore";
+    restoreButton.title = "Restore dismissed";
+    restoreButton.setAttribute("type", "button");
+    restoreButton.style.display = "none";
+    svgShowAll(restoreButton);
+    restoreButton.onclick = (e) => {
+      e.stopPropagation();
+      this._restoreGroupIssues(ruleName);
+    };
+
+    const headerActions = doc.createElement("div");
+    headerActions.className = "abledom-group-header-actions";
+    headerActions.appendChild(restoreButton);
+    headerActions.appendChild(countElement);
+
     header.appendChild(title);
-    header.appendChild(countElement);
+    header.appendChild(headerActions);
 
     header.onclick = () => {
       const isExpanded = header.classList.toggle("expanded");
@@ -692,6 +716,7 @@ export class IssuesUI {
       header,
       content,
       countElement: countElement as HTMLElementWithAbleDOMUIFlag,
+      restoreButton: restoreButton as HTMLElementWithAbleDOMUIFlag,
       count: 0,
     };
     this._groups.set(ruleName, group);
@@ -751,6 +776,33 @@ export class IssuesUI {
 
     this._setIssuesCount(this._issues.size);
     this.highlight(null);
+  }
+
+  updateRestoreButton(ruleName: string) {
+    const group = this._groups.get(ruleName);
+    if (!group) {
+      return;
+    }
+
+    let hasHidden = false;
+    for (const issue of this._issues) {
+      if (issue.rule.name === ruleName && issue.isHidden) {
+        hasHidden = true;
+        break;
+      }
+    }
+
+    group.restoreButton.style.display = hasHidden ? "inline-flex" : "none";
+  }
+
+  private _restoreGroupIssues(ruleName: string) {
+    for (const issue of this._issues) {
+      if (issue.rule.name === ruleName && issue.isHidden) {
+        issue.toggle(true);
+      }
+    }
+
+    this.updateRestoreButton(ruleName);
   }
 
   highlight(
