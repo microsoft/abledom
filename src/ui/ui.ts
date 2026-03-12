@@ -83,6 +83,8 @@ export class IssueUI {
   private _wrapper: HTMLElementWithAbleDOMUIFlag | undefined;
   private _rule: ValidationRule;
   private _onToggle: ((issueUI: IssueUI, show: boolean) => void) | undefined;
+  private _lastIssueMessage: string | undefined;
+  private _lastIssueElement: HTMLElement | undefined;
 
   static getElement(instance: IssueUI): HTMLElement | undefined {
     return instance._wrapper;
@@ -121,6 +123,16 @@ export class IssueUI {
     if (!wrapper) {
       return;
     }
+
+    if (
+      this._lastIssueMessage === issue.message &&
+      this._lastIssueElement === element
+    ) {
+      return;
+    }
+
+    this._lastIssueMessage = issue.message;
+    this._lastIssueElement = element;
 
     wrapper.__abledomui = true;
     wrapper.textContent = "";

@@ -3,6 +3,7 @@
   display: none;
   position: fixed;
   z-index: 100499;
+  pointer-events: none !important;
 }
 
 .abledom-highlight-border1 {
