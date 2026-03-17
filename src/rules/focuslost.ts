@@ -10,6 +10,7 @@ export class FocusLostRule extends ValidationRule<BlurIssue> {
   type = ValidationRuleType.Error;
   name = "focus-lost";
   anchored = false;
+  groupName = "Focus lost";
 
   private _focusLostTimeout = 2000; // For now reporting lost focus after 2 seconds of it being lost.
   private _clearScheduledFocusLost: (() => void) | undefined;

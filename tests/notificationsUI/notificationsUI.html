@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notifications UI</title>
+    <script type="module" src="./notificationsUI.ts"></script>
+  </head>
+  <body>
+    <h1>Notifications UI Test</h1>
+
+    <!-- Buttons that will trigger label rule (grouped issues) when labels are removed -->
+    <button id="btn-1">Button 1</button>
+    <button id="btn-2">Button 2</button>
+    <button id="btn-3">Button 3</button>
+
+    <!-- Elements that will trigger contrast rule (grouped issues) -->
+    <button id="contrast-bad-1" style="color: #fff; background-color: #fff">
+      White on white
+    </button>
+    <button id="contrast-bad-2" style="color: #000; background-color: #000">
+      Black on black
+    </button>
+
+    <!-- Good contrast element that can be made bad dynamically -->
+    <button id="contrast-good" style="color: #000; background-color: #fff">
+      Good contrast
+    </button>
+  </body>
+</html>

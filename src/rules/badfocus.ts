@@ -10,6 +10,7 @@ export class BadFocusRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "bad-focus";
   anchored = false;
+  groupName = "Bad focus";
 
   private _lastFocusStack: string[] | undefined;
   private _lastBlurStack: string[] | undefined;

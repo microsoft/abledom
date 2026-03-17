@@ -15,7 +15,7 @@ export interface TextNodeWithAbleDOMUIFlag extends Text {
 
 export class DOMBuilder {
   private _doc: Document | undefined;
-  private _stack: (HTMLElement | DocumentFragment)[];
+  private _stack: (HTMLElement | DocumentFragment | null)[];
 
   constructor(parent: HTMLElement | DocumentFragment) {
     this._doc = parent.ownerDocument;
@@ -27,34 +27,37 @@ export class DOMBuilder {
     attributes?: Record<string, string>,
     callback?: (element: HTMLElement) => void,
     namespace?: string,
+    skip?: boolean,
   ): DOMBuilder {
     const parent = this._stack[0];
-    const element = (
-      namespace
-        ? this._doc?.createElementNS(namespace, tagName)
-        : this._doc?.createElement(tagName)
-    ) as HTMLElementWithAbleDOMUIFlag;
+    const element = skip
+      ? null
+      : ((namespace
+          ? this._doc?.createElementNS(namespace, tagName)
+          : this._doc?.createElement(tagName)) as HTMLElementWithAbleDOMUIFlag);
 
-    if (parent && element) {
-      element.__abledomui = true;
+    if (parent !== undefined) {
+      if (parent && element) {
+        element.__abledomui = true;
 
-      if (attributes) {
-        for (const [key, value] of Object.entries(attributes)) {
-          if (key === "class") {
-            element.className = value;
-          } else if (key === "style") {
-            element.style.cssText = value;
-          } else {
-            element.setAttribute(key, value);
+        if (attributes) {
+          for (const [key, value] of Object.entries(attributes)) {
+            if (key === "class") {
+              element.className = value;
+            } else if (key === "style") {
+              element.style.cssText = value;
+            } else {
+              element.setAttribute(key, value);
+            }
           }
         }
-      }
 
-      if (callback) {
-        callback(element);
-      }
+        if (callback) {
+          callback(element);
+        }
 
-      parent.appendChild(element);
+        parent.appendChild(element);
+      }
 
       this._stack.unshift(element);
     }
@@ -87,7 +90,8 @@ export class DOMBuilder {
   element(
     callback: (element: HTMLElement | DocumentFragment) => void,
   ): DOMBuilder {
-    callback(this._stack[0]);
+    const el = this._stack[0];
+    el && callback(el);
     return this;
   }
 }

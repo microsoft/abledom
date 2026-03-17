@@ -32,6 +32,7 @@ export class NestedInteractiveElementRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "NestedInteractiveElementRule";
   anchored = true;
+  groupName = "Nested interactive element";
 
   private _isAriaHidden(element: HTMLElement): boolean {
     return element.ownerDocument.evaluate(

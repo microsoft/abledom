@@ -47,6 +47,7 @@ export class TabIndexRule extends ValidationRule {
   type = ValidationRuleType.Warning;
   name = "tabindex";
   anchored = true;
+  groupName = "Positive tabindex";
 
   accept(element: HTMLElement): boolean {
     return element.hasAttribute("tabindex");

@@ -8,6 +8,7 @@ export class FindElementRule extends ValidationRule {
   type = ValidationRuleType.Warning;
   name = "find-element";
   anchored = true;
+  groupName = "Element found";
 
   private _conditions: { [name: string]: (element: HTMLElement) => boolean } =
     {};

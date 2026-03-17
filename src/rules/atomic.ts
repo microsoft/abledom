@@ -9,6 +9,7 @@ export class AtomicRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "atomic";
   anchored = true;
+  groupName = "Atomic violation";
 
   accept(element: HTMLElement): boolean {
     return matchesSelector(element, focusableElementSelector);
