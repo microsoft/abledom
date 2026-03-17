@@ -29,6 +29,7 @@ export class FocusableElementLabelRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "FocusableElementLabelRule";
   anchored = true;
+  groupName = "Missing text label";
 
   private _isAriaHidden(element: HTMLElement): boolean {
     return element.ownerDocument.evaluate(

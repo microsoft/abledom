@@ -21,6 +21,7 @@ export class RequiredParentRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "aria-required-parent";
   anchored = true;
+  groupName = "Missing required parent";
 
   private parentRequirements: Map<string, ParentRequirement> = new Map([
     [

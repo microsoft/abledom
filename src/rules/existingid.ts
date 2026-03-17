@@ -9,6 +9,7 @@ export class ExistingIdRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "existing-id";
   anchored = true;
+  groupName = "Referenced element not found";
 
   accept(element: HTMLElement): boolean {
     return (

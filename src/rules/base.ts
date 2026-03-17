@@ -89,6 +89,12 @@ export abstract class ValidationRule<
   abstract anchored: boolean;
 
   /**
+   * A short friendly group name for grouping issues in the UI.
+   * If undefined, the issue will not be grouped.
+   */
+  groupName: string | undefined;
+
+  /**
    * Window is set when the rule is added to the AbleDOM instance.
    */
   get window(): Window | undefined {

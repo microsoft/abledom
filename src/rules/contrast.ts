@@ -74,6 +74,7 @@ export class ContrastRule extends ValidationRule {
   type = ValidationRuleType.Error;
   name = "ContrastRule";
   anchored = true;
+  groupName = "Insufficient color contrast";
 
   accept(element: HTMLElement): boolean {
     if (!isElementVisible(element)) {

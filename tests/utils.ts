@@ -10,7 +10,8 @@ import type {
 } from "abledom";
 import { Page } from "@playwright/test";
 
-export const issueSelector = "#abledom-report .abledom-issue";
+export const issueSelector =
+  "#abledom-report .abledom-issue:not(.abledom-issue-group-title)";
 
 interface WindowWithAbleDOMData extends Window {
   __ableDOMIdle?: typeof AbleDOM.prototype.idle;
