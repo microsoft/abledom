@@ -976,9 +976,31 @@ export class IssuesUI {
 
       if (container && countElement) {
         const count = container.children.length;
+
+        if (count === 0) {
+          this._removeIssueGroup(groupName, container);
+          continue;
+        }
+
         countElement.textContent = `${count}`;
       }
     }
+  }
+
+  private _removeIssueGroup(
+    groupName: string,
+    container: HTMLElementWithAbleDOMUIFlag,
+  ): void {
+    const groupElement = container.parentElement;
+
+    if (groupElement?.classList.contains("abledom-issue-group")) {
+      groupElement.remove();
+    } else {
+      container.remove();
+    }
+
+    delete this._issueGroupContainers[groupName];
+    delete this._issueGroupCountElements[groupName];
   }
 
   removeIssue(issue: IssueUI) {

@@ -213,6 +213,12 @@ test.describe("Notifications UI", () => {
 
       // All 3 label issues should be gone.
       expect(await getVisibleIssueCount(page)).toBe(issuesBefore - 3);
+
+      // Empty group title should be removed, not shown with "0".
+      const labelGroupTitles = page.locator(
+        `${groupTitleSelector}:has-text("Missing text label")`,
+      );
+      await expect(labelGroupTitles).toHaveCount(0);
     });
 
     test("group close button hides all issues within the group", async ({
