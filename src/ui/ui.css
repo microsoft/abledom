@@ -184,6 +184,24 @@
   padding-right: 10px;
 }
 
+.abledom-issue_warning + .abledom-issue-group-issues {
+  border-left: 3px solid rgba(163, 82, 1, 0.7);
+}
+#abledom-report.abledom-align-right
+  .abledom-issue_warning
+  + .abledom-issue-group-issues {
+  border-right: 3px solid rgba(163, 82, 1, 0.7);
+}
+
+.abledom-issue_info + .abledom-issue-group-issues {
+  border-left: 3px solid rgba(0, 0, 255, 0.7);
+}
+#abledom-report.abledom-align-right
+  .abledom-issue_info
+  + .abledom-issue-group-issues {
+  border-right: 3px solid rgba(0, 0, 255, 0.7);
+}
+
 .abledom-issue-group-title {
   background-color: rgba(164, 2, 2, 0.7);
   color: white;
