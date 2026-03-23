@@ -642,6 +642,14 @@ export class IssuesUI {
       this._toggleButtonCount.textContent = `${count}`;
     }
 
+    if (this._toggleButton) {
+      if (count > 0) {
+        this._toggleButton.classList.add("has-errors");
+      } else {
+        this._toggleButton.classList.remove("has-errors");
+      }
+    }
+
     if (this._container) {
       this._container.style.display = count > 0 ? "block" : "none";
     }

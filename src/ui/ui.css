@@ -59,6 +59,18 @@
   background-color: #111111;
 }
 
+.abledom-floating-button.has-errors {
+  background-color: #c0392b;
+}
+
+.abledom-floating-button.has-errors:hover {
+  background-color: #e74c3c;
+}
+
+.abledom-floating-button.has-errors.active {
+  background-color: #a93226;
+}
+
 .abledom-floating-label {
   white-space: nowrap;
 }

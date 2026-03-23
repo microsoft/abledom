@@ -45,7 +45,7 @@ const INTERACTIVE_ROLES = new Set([
 
 export class TabIndexRule extends ValidationRule {
   type = ValidationRuleType.Warning;
-  name = "tabindex";
+  name = "tab-index";
   anchored = true;
 
   accept(element: HTMLElement): boolean {

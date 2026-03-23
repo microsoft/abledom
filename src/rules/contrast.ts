@@ -72,7 +72,7 @@ function isTransparent(color: string): boolean {
 
 export class ContrastRule extends ValidationRule {
   type = ValidationRuleType.Error;
-  name = "ContrastRule";
+  name = "contrast-rule";
   anchored = true;
 
   accept(element: HTMLElement): boolean {
