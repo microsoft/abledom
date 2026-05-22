@@ -6,7 +6,6 @@ export default defineConfig({
     reporter: "src/reporter.ts",
   },
   format: ["cjs", "esm"],
-  dts: true,
   clean: true,
   sourcemap: true,
   splitting: false,
