@@ -621,6 +621,30 @@ baseTest.describe("page closed handling", () => {
       await context.close();
     },
   );
+
+  baseTest(
+    "should handle page.evaluate error gracefully when page transitions after an action",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button id='test'>Test</button></body></html>",
+      );
+
+      await attachAbleDOMMethodsToPage(page, testInfo);
+
+      const originalEvaluate = page.evaluate.bind(page);
+      page.evaluate = (async () => {
+        throw new Error(
+          "Execution context was destroyed, most likely because of a navigation.",
+        );
+      }) as typeof page.evaluate;
+
+      try {
+        await page.locator("#test").click();
+      } finally {
+        page.evaluate = originalEvaluate;
+      }
+    },
+  );
 });
 
 baseTest.describe("custom idle options via attachAbleDOMMethodsToPage", () => {
