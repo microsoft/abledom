@@ -84,6 +84,37 @@ function getCallerLocation(
   return null;
 }
 
+function isPageTransitionError(error: unknown): boolean {
+  let message: string;
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error
+  ) {
+    message = String(error.message);
+  } else {
+    message = String(error);
+  }
+
+  if (!message) {
+    return false;
+  }
+
+  return [
+    "has been closed",
+    "Target closed",
+    "Target page, context or browser has been closed",
+    "Execution context was destroyed",
+    "Cannot find context with specified id",
+    "Frame was detached",
+    "frame was detached",
+    "Object has been disposed",
+    "JSHandle is disposed",
+  ].some((errorMessage) => message.includes(errorMessage));
+}
+
 /**
  * Attaches AbleDOM accessibility checking methods to a Playwright Page.
  *
@@ -203,12 +234,8 @@ export async function attachAbleDOMMethodsToPage(
           { markAsRead: pageMarkAsRead, timeout: pageTimeout },
         );
       } catch (error) {
-        // Page may have been closed between the isClosed() check and evaluate()
-        // This can happen during test teardown or navigation
-        if (
-          error instanceof Error &&
-          error.message.includes("has been closed")
-        ) {
+        // Page may have navigated or closed between the action and evaluate().
+        if (isPageTransitionError(error)) {
           return;
         }
         throw error;
