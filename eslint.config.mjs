@@ -5,6 +5,16 @@ import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import globals from "globals";
 
+const headerRuleCreate = header.rules.header.create;
+header.rules.header.create = (context) =>
+  headerRuleCreate(
+    context.getSourceCode
+      ? context
+      : Object.assign(Object.create(context), {
+          // eslint-plugin-header still uses the pre-ESLint 10 rule context API.
+          getSourceCode: () => context.sourceCode,
+        }),
+  );
 header.rules.header.meta.schema = false;
 
 export default [

@@ -20,9 +20,8 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "abledom": ["src/"]
+      "abledom": ["./src/"]
     }
   },
   "include": [
