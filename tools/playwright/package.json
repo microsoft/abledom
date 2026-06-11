@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown && tsc --emitDeclarationOnly",
+    "build": "tsdown --config-loader unrun && tsc --emitDeclarationOnly",
     "build:check": "tsc --noEmit",
     "clean": "rimraf dist .test-output test-results",
     "format": "prettier --check .",

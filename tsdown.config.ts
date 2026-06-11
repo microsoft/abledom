@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 import { defineConfig, type TsdownPlugin } from "tsdown";
 import pkg from "./package.json";
-import { transformSVG } from "./transformsvg";
+import { transformSVG } from "./transformsvg.ts";
 
 const RAW_RE = /\?(raw|inline)$/;
 const INLINE_PREFIX = "\0inline-raw:";

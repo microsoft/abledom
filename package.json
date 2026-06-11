@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsdown && tsc -p tsconfig.build.json && pnpm exec downlevel-dts ./dist ./dist/ts3.9",
+    "build": "tsdown --config-loader unrun && tsc -p tsconfig.build.json && pnpm exec downlevel-dts ./dist ./dist/ts3.9",
     "clean": "rimraf dist",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
