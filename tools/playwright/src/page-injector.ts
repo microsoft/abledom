@@ -22,6 +22,13 @@ export interface AbleDOMIdleOptions {
    * @default 1000
    */
   timeout?: number;
+  /**
+   * Timeout in milliseconds to wait for the in-page evaluate() to resolve.
+   * If the browser's thread is dead, evaluate() can hang forever, so we bound
+   * it and ignore the timeout the same way page transition errors are ignored.
+   * @default 10000
+   */
+  evaluateTimeout?: number;
 }
 
 interface LocatorMonkeyPatchedWithAbleDOM extends Locator {
@@ -84,6 +91,24 @@ function getCallerLocation(
   return null;
 }
 
+/**
+ * Default timeout in milliseconds to wait for in-page validation (idle()) to
+ * complete.
+ */
+const DEFAULT_IDLE_TIMEOUT_MS = 1000;
+
+/**
+ * Default maximum time to wait for currentPage.evaluate() to resolve. If the
+ * browser's thread is dead, evaluate() can hang forever, so we bound it and
+ * ignore the timeout the same way page transition errors are ignored.
+ */
+const DEFAULT_EVALUATE_TIMEOUT_MS = 10000;
+const EVALUATE_TIMEOUT_MESSAGE = "AbleDOM evaluate() timed out";
+
+function isEvaluateTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.message === EVALUATE_TIMEOUT_MESSAGE;
+}
+
 function isPageTransitionError(error: unknown): boolean {
   let message: string;
   if (error instanceof Error) {
@@ -144,7 +169,11 @@ export async function attachAbleDOMMethodsToPage(
   testInfo?: TestInfo,
   options: AbleDOMIdleOptions = {},
 ): Promise<void> {
-  const { markAsRead = true, timeout = 1000 } = options;
+  const {
+    markAsRead = true,
+    timeout = DEFAULT_IDLE_TIMEOUT_MS,
+    evaluateTimeout = DEFAULT_EVALUATE_TIMEOUT_MS,
+  } = options;
   const attachAbleDOMMethodsToPageWithCachedLocatorProto: FunctionWithCachedLocatorProto =
     attachAbleDOMMethodsToPage;
 
@@ -152,6 +181,8 @@ export async function attachAbleDOMMethodsToPage(
   (page as unknown as Record<string, unknown>).__abledomTestInfo = testInfo;
   (page as unknown as Record<string, unknown>).__abledomMarkAsRead = markAsRead;
   (page as unknown as Record<string, unknown>).__abledomTimeout = timeout;
+  (page as unknown as Record<string, unknown>).__abledomEvaluateTimeout =
+    evaluateTimeout;
 
   let locatorProto: LocatorMonkeyPatchedWithAbleDOM | undefined =
     attachAbleDOMMethodsToPageWithCachedLocatorProto.__cachedLocatorProto;
@@ -191,6 +222,10 @@ export async function attachAbleDOMMethodsToPage(
           ? ((currentPage as unknown as Record<string, unknown>)
               .__abledomTimeout as number | undefined)
           : timeoutOverride;
+      const pageEvaluateTimeout =
+        ((currentPage as unknown as Record<string, unknown>)
+          .__abledomEvaluateTimeout as number | undefined) ??
+        DEFAULT_EVALUATE_TIMEOUT_MS;
 
       let result: {
         hasInstance: boolean;
@@ -204,41 +239,56 @@ export async function attachAbleDOMMethodsToPage(
           | undefined;
       };
 
+      // Time-bound the evaluate() so that if the browser's thread is dead we
+      // don't wait forever.
+      let evaluateTimeout: ReturnType<typeof setTimeout> | undefined;
+      const evaluateTimeoutPromise = new Promise<never>((_, reject) => {
+        evaluateTimeout = setTimeout(() => {
+          reject(new Error(EVALUATE_TIMEOUT_MESSAGE));
+        }, pageEvaluateTimeout);
+      });
+
       try {
-        result = await currentPage.evaluate(
-          async ({ markAsRead, timeout }) => {
-            const win = window as unknown as WindowWithAbleDOMInstance;
-            const hasInstance = !!win.ableDOMInstanceForTesting;
-            const issues = await win.ableDOMInstanceForTesting?.idle(
-              markAsRead,
-              timeout,
-            );
-            const el = issues?.[0]?.element;
+        result = await Promise.race([
+          currentPage.evaluate(
+            async ({ markAsRead, timeout }) => {
+              const win = window as unknown as WindowWithAbleDOMInstance;
+              const hasInstance = !!win.ableDOMInstanceForTesting;
+              const issues = await win.ableDOMInstanceForTesting?.idle(
+                markAsRead,
+                timeout,
+              );
+              const el = issues?.[0]?.element;
 
-            if (el) {
-              // TODO: Make highlighting flag-dependent.
-              // win.ableDOMInstanceForTesting?.highlightElement(el, true);
-            }
+              if (el) {
+                // TODO: Make highlighting flag-dependent.
+                // win.ableDOMInstanceForTesting?.highlightElement(el, true);
+              }
 
-            return {
-              hasInstance,
-              issues: issues?.map((issue) => ({
-                id: issue.id,
-                message: issue.message,
-                element: issue.element?.outerHTML,
-                parentParent:
-                  issue.element?.parentElement?.parentElement?.outerHTML,
-              })),
-            };
-          },
-          { markAsRead: pageMarkAsRead, timeout: pageTimeout },
-        );
+              return {
+                hasInstance,
+                issues: issues?.map((issue) => ({
+                  id: issue.id,
+                  message: issue.message,
+                  element: issue.element?.outerHTML,
+                  parentParent:
+                    issue.element?.parentElement?.parentElement?.outerHTML,
+                })),
+              };
+            },
+            { markAsRead: pageMarkAsRead, timeout: pageTimeout },
+          ),
+          evaluateTimeoutPromise,
+        ]);
       } catch (error) {
-        // Page may have navigated or closed between the action and evaluate().
-        if (isPageTransitionError(error)) {
+        // Page may have navigated or closed between the action and evaluate(),
+        // or the browser's thread is dead and evaluate() never resolved.
+        if (isPageTransitionError(error) || isEvaluateTimeoutError(error)) {
           return;
         }
         throw error;
+      } finally {
+        clearTimeout(evaluateTimeout);
       }
 
       const { hasInstance, issues } = result;
