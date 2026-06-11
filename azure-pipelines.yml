@@ -52,9 +52,13 @@ extends:
                 displayName: Use Node 22.x
                 inputs:
                   versionSpec: 22.x
-              - script: | 
-                  npm install
-                displayName: npm install
+              - script: |
+                  corepack enable
+                  corepack prepare pnpm@11.5.3 --activate
+                displayName: Enable pnpm via corepack
+              - script: |
+                  pnpm install --frozen-lockfile
+                displayName: pnpm install
             
               - task: CmdLine@2
                 displayName: Authenticate git for pushes
@@ -76,7 +80,7 @@ extends:
                 displayName: Publish (official)
                 condition: and(eq(variables.skipPublish, false), eq(variables.prerelease, false))
                 inputs:
-                  script: 'npm run release -- $(publishVersion) --ci '
+                  script: 'pnpm run release -- $(publishVersion) --ci '
                 env:
                     NPM_TOKEN: $(npmToken)
             
@@ -84,6 +88,6 @@ extends:
                 displayName: Publish (prerelease)
                 condition: and(eq(variables.skipPublish, false), eq(variables.prerelease, true))
                 inputs:
-                  script: npm run release -- $(publishVersion) --preRelease $(prereleaseTag) --ci
+                  script: pnpm run release -- $(publishVersion) --preRelease $(prereleaseTag) --ci
                 env:
                     NPM_TOKEN: $(npmToken)

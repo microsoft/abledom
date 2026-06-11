@@ -35,7 +35,7 @@ baseTest.describe.serial("fixture and reporter integration", () => {
     }
 
     // Run the integration test suite as a subprocess
-    execSync("npx playwright test --config=playwright.config.ts", {
+    execSync("pnpm exec playwright test --config=playwright.config.ts", {
       cwd: INTEGRATION_DIR,
       stdio: "pipe",
       env: { ...process.env, CI: "" },

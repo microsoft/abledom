@@ -19,31 +19,35 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Use Node.js 22
         uses: actions/setup-node@v3
         with:
           node-version: 22.x
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install
+        run: pnpm exec playwright install --with-deps chromium firefox
 
       - name: Type check
-        run: npm run type-check
+        run: pnpm run type-check
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Format check
-        run: npm run format
+        run: pnpm run format
 
       - name: Run tests
-        run: npm run test
+        run: pnpm run test
 
       - name: Check for unstaged changes
         run: |
@@ -58,41 +62,45 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Use Node.js 22
         uses: actions/setup-node@v3
         with:
           node-version: 22.x
+          cache: pnpm
 
       - name: Install root dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install dependencies
         working-directory: tools/playwright
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         working-directory: tools/playwright
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Type check
         working-directory: tools/playwright
-        run: npm run type-check
+        run: pnpm run type-check
 
       - name: Build
         working-directory: tools/playwright
-        run: npm run build
+        run: pnpm run build
 
       - name: Lint
         working-directory: tools/playwright
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Format check
         working-directory: tools/playwright
-        run: npm run format
+        run: pnpm run format
 
       - name: Run tests
         working-directory: tools/playwright
-        run: npm run test
+        run: pnpm run test
 
       - name: Check for unstaged changes
         run: |
