@@ -1,0 +1,12 @@
+packages:
+  - .
+
+# Forbid all dependency lifecycle (build/install) scripts. An empty allowlist
+# means no dependency is permitted to run install/postinstall/prepare scripts.
+onlyBuiltDependencies: []
+
+# esbuild (pulled in transitively by vite) ships a build script we intentionally
+# do not run. Recording the decision here keeps it forbidden and stops pnpm from
+# prompting about it on every install.
+allowBuilds:
+  esbuild: false

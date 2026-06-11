@@ -12,7 +12,7 @@ import {
 import type { AbleDOM } from "../core";
 
 // The imports below will become functions that use DOMBuilder to build SVG
-// unrolled by both Vite (in `npm run dev`) and TSUP (in `npm run build`).
+// unrolled by both Vite (in `pnpm dev`) and tsdown (in `pnpm build`).
 // @ts-expect-error parsed assets
 import uiCSS from "./ui.css?raw";
 // @ts-expect-error parsed assets

@@ -28,7 +28,7 @@
     "src",
     "tests",
     "vite.config.ts",
-    "tsup.config.ts",
+    "tsdown.config.ts",
     "tests/pages/page1.ts"
   ],
   "exclude": ["dist", "node_modules"]
