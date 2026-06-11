@@ -647,6 +647,129 @@ baseTest.describe("page closed handling", () => {
   );
 });
 
+baseTest.describe("evaluate() timeout handling", () => {
+  baseTest(
+    "should not hang forever and should not throw when evaluate() never resolves",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button id='test'>Test</button></body></html>",
+      );
+
+      // Use a short evaluate timeout so the test stays fast.
+      await attachAbleDOMMethodsToPage(page, testInfo, {
+        evaluateTimeout: 200,
+      });
+
+      // Simulate a dead browser thread: evaluate() never resolves.
+      const originalEvaluate = page.evaluate.bind(page);
+      page.evaluate = (() =>
+        new Promise(() => {
+          /* never resolves */
+        })) as typeof page.evaluate;
+
+      try {
+        // The patched action must still resolve (via the timeout race) rather
+        // than hanging forever, and the timeout must be swallowed (no throw).
+        await baseTest
+          .expect(page.locator("#test").click())
+          .resolves.toBeUndefined();
+      } finally {
+        page.evaluate = originalEvaluate;
+      }
+
+      // The timeout is ignored like a page transition error, so nothing is
+      // reported.
+      const customDataAttachments = testInfo.attachments.filter(
+        (att) => att.name === "abledom-test-data",
+      );
+      baseTest.expect(customDataAttachments.length).toBe(0);
+    },
+  );
+
+  baseTest(
+    "should report normally when evaluate() resolves before the timeout",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button id='test'>Test</button></body></html>",
+      );
+
+      // Generous evaluate timeout - evaluate() resolves well before it.
+      await attachAbleDOMMethodsToPage(page, testInfo, {
+        evaluateTimeout: 5000,
+      });
+
+      await page.evaluate(() => {
+        const win = window as WindowWithAbleDOMInstance;
+        win.ableDOMInstanceForTesting = {
+          idle: async () => [
+            {
+              id: "missing-label",
+              message: "Button is missing an accessible label",
+              element: document.querySelector("button"),
+            },
+          ],
+          highlightElement: () => {
+            /* noop */
+          },
+        };
+      });
+
+      await page.locator("#test").click();
+
+      // Since evaluate() won the race, the issue is reported as usual.
+      const customDataAttachments = testInfo.attachments.filter(
+        (att) => att.name === "abledom-test-data",
+      );
+      baseTest.expect(customDataAttachments.length).toBe(1);
+      const reportData = JSON.parse(customDataAttachments[0].body!.toString());
+      baseTest.expect(reportData.issueCount).toBe(1);
+    },
+  );
+
+  baseTest(
+    "should not throw and not report when a slow evaluate() exceeds the timeout",
+    async ({ page }, testInfo) => {
+      await page.goto(
+        "data:text/html,<html><body><button id='test'>Test</button></body></html>",
+      );
+
+      // Short timeout; idle() takes longer than that to resolve.
+      await attachAbleDOMMethodsToPage(page, testInfo, {
+        evaluateTimeout: 200,
+      });
+
+      await page.evaluate(() => {
+        const win = window as WindowWithAbleDOMInstance;
+        win.ableDOMInstanceForTesting = {
+          idle: async () => {
+            // Resolve far later than the evaluate timeout.
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            return [
+              {
+                id: "too-late",
+                message: "This should never be reported",
+                element: document.querySelector("button"),
+              },
+            ];
+          },
+          highlightElement: () => {
+            /* noop */
+          },
+        };
+      });
+
+      await baseTest
+        .expect(page.locator("#test").click())
+        .resolves.toBeUndefined();
+
+      const customDataAttachments = testInfo.attachments.filter(
+        (att) => att.name === "abledom-test-data",
+      );
+      baseTest.expect(customDataAttachments.length).toBe(0);
+    },
+  );
+});
+
 baseTest.describe("custom idle options via attachAbleDOMMethodsToPage", () => {
   baseTest(
     "should pass custom markAsRead=false option",
